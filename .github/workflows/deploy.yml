@@ -19,9 +19,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install unzip
+      - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y unzip xz-utils curl
 
       - name: Unzip project
@@ -33,27 +36,72 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Flutter env
+        run: |
+          flutter --version
+          dart --version
+
       - name: Enable web
         run: flutter config --enable-web
 
-      # Создаём web-папки (без этого иногда ругается)
-      - name: Configure project (ensure web platform)
+      # ЧИСТИМ pubspec.yaml от дублей и фиксируем зависимости/ассеты (кириллица в PDF)
+      - name: Sanitize pubspec.yaml (single assets block)
+        working-directory: minimal_notes_web
+        run: |
+          cat > pubspec.yaml <<'YML'
+          name: minimal_notes_web
+          description: Minimal notes & tasks app for Web with checklist PDF, detailed PDF with photos, folders, previews, and completed tab.
+          publish_to: "none"
+
+          environment:
+            sdk: ">=3.3.0 <4.0.0"
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            cupertino_icons: ^1.0.8
+            flutter_riverpod: ^2.5.1
+            uuid: ^4.4.0
+            hive: ^2.2.3
+            hive_flutter: ^1.1.0
+            image_picker: ^1.1.2
+            file_picker: ^8.0.2
+            pdf: ^3.11.1
+            printing: ^5.13.1
+            intl: ^0.19.0
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^4.0.0
+
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/
+              - assets/fonts/NotoSans-Regular.ttf
+              - assets/fonts/NotoSans-Bold.ttf
+          YML
+
+      # Создаём web-папки, если их нет (безопасно выполнять всегда)
+      - name: Ensure web platform
         working-directory: minimal_notes_web
         run: flutter create . --platforms web
 
-      # Скачиваем TTF шрифты для PDF в ассеты (кириллица — без квадратов)
+      # Подтягиваем TTF (шрифты в ассетах → кириллица без квадратов)
       - name: Download NotoSans fonts (Cyrillic)
         working-directory: minimal_notes_web
         run: |
           mkdir -p assets/fonts
           curl -L -o assets/fonts/NotoSans-Regular.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Regular.ttf
           curl -L -o assets/fonts/NotoSans-Bold.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Bold.ttf
+          ls -la assets/fonts
 
       - name: Pub get
         working-directory: minimal_notes_web
         run: flutter pub get
 
-      # Автоматический base-href: /<repo>/ для user/org реп
+      # Автоматически считаем base-href: /<repo>/ (для repo pages) или / для *.github.io
       - name: Compute base-href
         id: base
         run: |
@@ -63,17 +111,19 @@ jobs:
           else
             echo "BASE=/$REPO_NAME/" >> $GITHUB_OUTPUT
           fi
+          echo "Using base-href: $(cat $GITHUB_OUTPUT || echo ${{ steps.base.outputs.BASE }})"
 
-      - name: Build web
+      - name: Build web (release)
         working-directory: minimal_notes_web
         run: flutter build web --release --no-wasm-dry-run --base-href "${{ steps.base.outputs.BASE }}"
 
-      # Файл версии для авто-перезагрузки клиентов (см. update watcher)
+      # Версия для клиентского авто-обновления
       - name: Write version.json
         working-directory: minimal_notes_web
         run: |
           mkdir -p build/web
           echo "{\"version\":\"${GITHUB_SHA}\"}" > build/web/version.json
+          cat build/web/version.json
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
