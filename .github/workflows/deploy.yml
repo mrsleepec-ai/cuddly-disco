@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,7 +36,7 @@ jobs:
       - name: Enable web
         run: flutter config --enable-web
 
-      - name: Configure project for Web
+      - name: Configure project (ensure web folder exists)
         working-directory: minimal_notes_web
         run: flutter create . --platforms web
 
@@ -52,9 +56,9 @@ jobs:
 
       - name: Build web
         working-directory: minimal_notes_web
-        run: flutter build web --release --base-href "${{ steps.base.outputs.BASE }}"
+        run: flutter build web --release --no-wasm-dry-run --base-href "${{ steps.base.outputs.BASE }}"
 
-      - name: Write version.json
+      - name: Write version.json (for auto-update)
         working-directory: minimal_notes_web
         run: |
           mkdir -p build/web
