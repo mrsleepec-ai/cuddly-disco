@@ -53,7 +53,13 @@ jobs:
       - name: Build web
         working-directory: minimal_notes_web
         run: flutter build web --release --base-href "${{ steps.base.outputs.BASE }}"
-
+# после шага "Build web", ПЕРЕД "Deploy to gh-pages"
+- name: Write version.json
+  working-directory: minimal_notes_web
+  run: |
+    mkdir -p build/web
+    echo "{\"version\":\"${GITHUB_SHA}\"}" > build/web/version.json
+    
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
