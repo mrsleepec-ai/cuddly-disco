@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install unzip
-        run: sudo apt-get update && sudo apt-get install -y unzip xz-utils
+        run: sudo apt-get update && sudo apt-get install -y unzip xz-utils curl
 
       - name: Unzip project
         run: unzip -o minimal_notes_web.zip
@@ -36,14 +36,24 @@ jobs:
       - name: Enable web
         run: flutter config --enable-web
 
-      - name: Configure project (ensure web folder exists)
+      # Создаём web-папки (без этого иногда ругается)
+      - name: Configure project (ensure web platform)
         working-directory: minimal_notes_web
         run: flutter create . --platforms web
+
+      # Скачиваем TTF шрифты для PDF в ассеты (кириллица — без квадратов)
+      - name: Download NotoSans fonts (Cyrillic)
+        working-directory: minimal_notes_web
+        run: |
+          mkdir -p assets/fonts
+          curl -L -o assets/fonts/NotoSans-Regular.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Regular.ttf
+          curl -L -o assets/fonts/NotoSans-Bold.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Bold.ttf
 
       - name: Pub get
         working-directory: minimal_notes_web
         run: flutter pub get
 
+      # Автоматический base-href: /<repo>/ для user/org реп
       - name: Compute base-href
         id: base
         run: |
@@ -58,7 +68,8 @@ jobs:
         working-directory: minimal_notes_web
         run: flutter build web --release --no-wasm-dry-run --base-href "${{ steps.base.outputs.BASE }}"
 
-      - name: Write version.json (for auto-update)
+      # Файл версии для авто-перезагрузки клиентов (см. update watcher)
+      - name: Write version.json
         working-directory: minimal_notes_web
         run: |
           mkdir -p build/web
