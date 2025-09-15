@@ -1,4 +1,4 @@
-name: Deploy Flutter Web to Pages
+name: Deploy Minimal Notes to GitHub Pages
 
 on:
   push:
@@ -7,13 +7,13 @@ on:
       - 'minimal_notes_web.zip'
       - '.github/workflows/deploy.yml'
 
-# 👇 даём токену право писать содержимое репо
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -54,12 +54,12 @@ jobs:
         working-directory: minimal_notes_web
         run: flutter build web --release --base-href "${{ steps.base.outputs.BASE }}"
 
-  - name: Write version.json
-  working-directory: minimal_notes_web
-  run: |
-    mkdir -p build/web
-    echo "{\"version\":\"${GITHUB_SHA}\"}" > build/web/version.json
-    
+      - name: Write version.json
+        working-directory: minimal_notes_web
+        run: |
+          mkdir -p build/web
+          echo "{\"version\":\"${GITHUB_SHA}\"}" > build/web/version.json
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
