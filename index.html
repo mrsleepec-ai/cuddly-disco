@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mint</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">Mint</header>
+  <main class="container">
+    <section id="view-list">
+      <div class="new-task">
+        <input id="newTaskTitle" placeholder="Новая задача..." />
+        <button id="addTaskBtn">Добавить</button>
+      </div>
+      <div id="taskList"></div>
+    </section>
+
+    <section id="view-detail" class="hidden">
+      <button id="backBtn" class="back-btn">← Назад</button>
+      <h2 id="taskTitle"></h2>
+      <div class="new-subtask">
+        <input id="newSubtaskTitle" placeholder="Новая подзадача (пример: UI/Сверстать экран)"/>
+        <button id="addSubtaskBtn">Добавить</button>
+      </div>
+      <div class="hint-subtasks">
+        Для папок используйте префикс: <code>UI/Сверстать</code>, <code>Бэклог::Навигация</code> или <code>Техдолг &gt; Рефакторинг</code>.
+      </div>
+      <div id="checklist"></div>
+    </section>
+  </main>
+
+  <script src="idb.js"></script>
+  <script src="app.v60.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+</body>
+</html>

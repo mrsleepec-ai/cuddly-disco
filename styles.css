@@ -1,0 +1,21 @@
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background: #f3f4f6; color: #111827; }
+.app-header { background: #2563eb; color: white; padding: 14px 16px; font-weight: 700; }
+.container { max-width: 760px; margin: 16px auto; padding: 0 12px; }
+.hidden { display: none; }
+.new-task, .new-subtask { display: flex; gap: 8px; margin: 12px 0; }
+.new-task input, .new-subtask input { flex: 1 1 auto; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; }
+.new-task button, .new-subtask button, .back-btn { padding: 10px 12px; border: none; background: #111827; color: white; border-radius: 8px; cursor: pointer; }
+.card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+.card h3 { margin: 0 0 6px 0; font-size: 16px; }
+.btn-open { background: #2563eb; }
+.task-actions { display: flex; gap: 8px; }
+.checklist-folder { margin-top: 12px; margin-bottom: 6px; font-weight: 600; opacity: 0.75; }
+.checklist-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.checklist-item.is-done .checklist-title { text-decoration: line-through; opacity: 0.6; }
+.checklist-checkbox { flex: 0 0 auto; }
+.checklist-title { flex: 1 1 auto; }
+.checklist-actions { flex: 0 0 auto; display: inline-flex; gap: 6px; }
+.btn-edit-subtask, .btn-del-subtask { border: none; background: transparent; cursor: pointer; font-size: 14px; line-height: 1; }
+.hint-subtasks { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
