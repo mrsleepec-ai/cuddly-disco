@@ -17,7 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,15 +35,9 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter env
-        run: |
-          flutter --version
-          dart --version
-
       - name: Enable web
         run: flutter config --enable-web
 
-      # ЧИСТИМ pubspec.yaml от дублей и фиксируем зависимости/ассеты (кириллица в PDF)
       - name: Sanitize pubspec.yaml (single assets block)
         working-directory: minimal_notes_web
         run: |
@@ -52,10 +45,8 @@ jobs:
           name: minimal_notes_web
           description: Minimal notes & tasks app for Web with checklist PDF, detailed PDF with photos, folders, previews, and completed tab.
           publish_to: "none"
-
           environment:
             sdk: ">=3.3.0 <4.0.0"
-
           dependencies:
             flutter:
               sdk: flutter
@@ -69,12 +60,10 @@ jobs:
             pdf: ^3.11.1
             printing: ^5.13.1
             intl: ^0.19.0
-
           dev_dependencies:
             flutter_test:
               sdk: flutter
             flutter_lints: ^4.0.0
-
           flutter:
             uses-material-design: true
             assets:
@@ -83,12 +72,10 @@ jobs:
               - assets/fonts/NotoSans-Bold.ttf
           YML
 
-      # Создаём web-папки, если их нет (безопасно выполнять всегда)
       - name: Ensure web platform
         working-directory: minimal_notes_web
         run: flutter create . --platforms web
 
-      # Подтягиваем TTF (шрифты в ассетах → кириллица без квадратов)
       - name: Download NotoSans fonts (Cyrillic)
         working-directory: minimal_notes_web
         run: |
@@ -101,7 +88,6 @@ jobs:
         working-directory: minimal_notes_web
         run: flutter pub get
 
-      # Автоматически считаем base-href: /<repo>/ (для repo pages) или / для *.github.io
       - name: Compute base-href
         id: base
         run: |
@@ -111,13 +97,11 @@ jobs:
           else
             echo "BASE=/$REPO_NAME/" >> $GITHUB_OUTPUT
           fi
-          echo "Using base-href: $(cat $GITHUB_OUTPUT || echo ${{ steps.base.outputs.BASE }})"
 
       - name: Build web (release)
         working-directory: minimal_notes_web
         run: flutter build web --release --no-wasm-dry-run --base-href "${{ steps.base.outputs.BASE }}"
 
-      # Версия для клиентского авто-обновления
       - name: Write version.json
         working-directory: minimal_notes_web
         run: |
