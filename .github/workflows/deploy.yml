@@ -25,11 +25,16 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Enable web
+      - name: Enable web globally
         run: flutter config --enable-web
 
       - name: Flutter version
         run: flutter --version
+
+      # 👉 ДОБАВЛЕН ШАГ: создаёт недостающую папку web/ в проекте
+      - name: Configure project for Web
+        working-directory: minimal_notes_web
+        run: flutter create . --platforms web
 
       - name: Pub get
         working-directory: minimal_notes_web
