@@ -53,8 +53,8 @@ jobs:
       - name: Build web
         working-directory: minimal_notes_web
         run: flutter build web --release --base-href "${{ steps.base.outputs.BASE }}"
-# после шага "Build web", ПЕРЕД "Deploy to gh-pages"
-- name: Write version.json
+
+  - name: Write version.json
   working-directory: minimal_notes_web
   run: |
     mkdir -p build/web
