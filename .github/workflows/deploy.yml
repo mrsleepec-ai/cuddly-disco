@@ -38,9 +38,10 @@ jobs:
       - name: Enable web
         run: flutter config --enable-web
 
-      # 1) Чистый pubspec.yaml c ОДНИМ блоком assets (включая шрифты)
+      # === 1) pubspec.yaml: один блок assets (+ шрифты) ===
       - name: Sanitize pubspec.yaml (single assets block)
         working-directory: minimal_notes_web
+        shell: bash
         run: |
           cat > pubspec.yaml <<'YML'
           name: minimal_notes_web
@@ -77,295 +78,295 @@ jobs:
               - assets/fonts/NotoSans-Bold.ttf
           YML
 
-      # 2) Перезаписываем pdf_export.dart гарантированно корректным кодом
+      # === 2) Перезаписываем pdf_export.dart (кириллица + принудительное открытие/скачивание PDF) ===
       - name: Overwrite lib/services/pdf_export.dart (Cyrillic + open PDF)
         working-directory: minimal_notes_web
+        shell: bash
         run: |
           mkdir -p lib/services
           cat > lib/services/pdf_export.dart <<'DART'
-// lib/services/pdf_export.dart
-import 'dart:typed_data';
-import 'dart:html' as html;
+          // lib/services/pdf_export.dart
+          import 'dart:typed_data';
+          import 'dart:html' as html;
 
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:intl/intl.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
-import 'package:hive/hive.dart';
+          import 'package:flutter/services.dart' show rootBundle;
+          import 'package:intl/intl.dart';
+          import 'package:pdf/widgets.dart' as pw;
+          import 'package:pdf/pdf.dart';
+          import 'package:hive/hive.dart';
 
-import '../models/task.dart';
-import '../models/subitem.dart';
-import '../models/attachment.dart';
+          import '../models/task.dart';
+          import '../models/subitem.dart';
+          import '../models/attachment.dart';
 
-enum PdfVariant { checklist, detailed }
+          enum PdfVariant { checklist, detailed }
 
-class PdfExporter {
-  Future<void> exportTask(String taskId, PdfVariant variant, {int days = 28}) async {
-    final tasks = Hive.box<Task>('tasks');
-    final subs = Hive.box<Subitem>('subitems');
-    final atts = Hive.box<Attachment>('attachments');
+          class PdfExporter {
+            Future<void> exportTask(String taskId, PdfVariant variant, {int days = 28}) async {
+              final tasks = Hive.box<Task>('tasks');
+              final subs = Hive.box<Subitem>('subitems');
+              final atts = Hive.box<Attachment>('attachments');
 
-    final task = tasks.get(taskId)!;
+              final task = tasks.get(taskId)!;
 
-    final subitems = subs.values
-        .where((s) => s.taskId == taskId)
-        .toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+              final subitems = subs.values
+                  .where((s) => s.taskId == taskId)
+                  .toList()
+                ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    final attsBySub = <String, List<Attachment>>{};
-    for (final s in subitems) {
-      attsBySub[s.id] = atts.values
-          .where((a) => a.subitemId == s.id)
-          .toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    }
+              final attsBySub = <String, List<Attachment>>{};
+              for (final s in subitems) {
+                attsBySub[s.id] = atts.values
+                    .where((a) => a.subitemId == s.id)
+                    .toList()
+                  ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+              }
 
-    // ==== ВСТРОЕННЫЕ ШРИФТЫ (КИРИЛЛИЦА) ====
-    late final pw.Font fontBase;
-    late final pw.Font fontBold;
-    pw.ThemeData theme;
-    try {
-      final reg = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
-      final bld = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
-      fontBase = pw.Font.ttf(reg);
-      fontBold = pw.Font.ttf(bld);
-      theme = pw.ThemeData.withFont(base: fontBase, bold: fontBold);
-    } catch (_) {
-      // Фолбэк, если ассеты не попали в билд
-      fontBase = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-      theme = pw.ThemeData.withFont(base: fontBase, bold: fontBold);
-    }
+              // ==== ВСТРОЕННЫЕ ШРИФТЫ (КИРИЛЛИЦА) ====
+              late final pw.Font fontBase;
+              late final pw.Font fontBold;
+              pw.ThemeData theme;
+              try {
+                final reg = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
+                final bld = await rootBundle.load('assets/fonts/NotoSans-Bold.ttf');
+                fontBase = pw.Font.ttf(reg);
+                fontBold = pw.Font.ttf(bld);
+                theme = pw.ThemeData.withFont(base: fontBase, bold: fontBold);
+              } catch (_) {
+                // Фолбэк, если ассеты не попали в билд
+                fontBase = pw.Font.helvetica();
+                fontBold = pw.Font.helveticaBold();
+                theme = pw.ThemeData.withFont(base: fontBase, bold: fontBold);
+              }
 
-    final doc = pw.Document();
+              final doc = pw.Document();
 
-    if (variant == PdfVariant.checklist) {
-      final start = DateTime(task.createdAt.year, task.createdAt.month, task.createdAt.day);
-      int generated = 0;
-      while (generated < days) {
-        final remain = days - generated;
-        final span = remain >= 7 ? 7 : remain;
-        final dates = List.generate(span, (i) => start.add(Duration(days: generated + i)));
+              if (variant == PdfVariant.checklist) {
+                final start = DateTime(task.createdAt.year, task.createdAt.month, task.createdAt.day);
+                int generated = 0;
+                while (generated < days) {
+                  final remain = days - generated;
+                  final span = remain >= 7 ? 7 : remain;
+                  final dates = List.generate(span, (i) => start.add(Duration(days: generated + i)));
 
-        doc.addPage(
-          pw.MultiPage(
-            theme: theme,
-            pageTheme: _theme(landscape: true),
-            build: (ctx) => [
-              pw.Header(
-                level: 0,
-                child: pw.Text('Чек-лист: ${task.title}', style: pw.TextStyle(fontSize: 22, font: fontBold)),
-              ),
-              pw.Text(
-                'Период: ${DateFormat('dd.MM').format(dates.first)} – ${DateFormat('dd.MM').format(dates.last)}',
-                style: pw.TextStyle(font: fontBase),
-              ),
-              pw.SizedBox(height: 10),
-              _checklistTable(
-                subitems.where((s) => s.type == SubitemType.subtask).toList(),
-                dates,
-                fontBase,
-                fontBold,
-              ),
-            ],
-          ),
-        );
+                  doc.addPage(
+                    pw.MultiPage(
+                      theme: theme,
+                      pageTheme: _theme(landscape: true),
+                      build: (ctx) => [
+                        pw.Header(
+                          level: 0,
+                          child: pw.Text('Чек-лист: ${task.title}', style: pw.TextStyle(fontSize: 22, font: fontBold)),
+                        ),
+                        pw.Text(
+                          'Период: ${DateFormat('dd.MM').format(dates.first)} – ${DateFormat('dd.MM').format(dates.last)}',
+                          style: pw.TextStyle(font: fontBase),
+                        ),
+                        pw.SizedBox(height: 10),
+                        _checklistTable(
+                          subitems.where((s) => s.type == SubitemType.subtask).toList(),
+                          dates,
+                          fontBase,
+                          fontBold,
+                        ),
+                      ],
+                    ),
+                  );
 
-        generated += span;
-      }
-    } else {
-      doc.addPage(
-        pw.MultiPage(
-          theme: theme,
-          pageTheme: _theme(),
-          build: (ctx) => [
-            pw.Header(
-              level: 0,
-              child: pw.Text(task.title, style: pw.TextStyle(fontSize: 24, font: fontBold)),
-            ),
-            pw.Text(
-              'Экспорт: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
-              style: pw.TextStyle(font: fontBase),
-            ),
-            pw.SizedBox(height: 12),
-            ..._detailedBlocks(subitems, attsBySub, fontBase, fontBold),
-          ],
-        ),
-      );
-    }
+                  generated += span;
+                }
+              } else {
+                doc.addPage(
+                  pw.MultiPage(
+                    theme: theme,
+                    pageTheme: _theme(),
+                    build: (ctx) => [
+                      pw.Header(
+                        level: 0,
+                        child: pw.Text(task.title, style: pw.TextStyle(fontSize: 24, font: fontBold)),
+                      ),
+                      pw.Text(
+                        'Экспорт: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
+                        style: pw.TextStyle(font: fontBase),
+                      ),
+                      pw.SizedBox(height: 12),
+                      ..._detailedBlocks(subitems, attsBySub, fontBase, fontBold),
+                    ],
+                  ),
+                );
+              }
 
-    // ==== Сохранить и ОТКРЫТЬ/СКАЧАТЬ PDF В БРАУЗЕРЕ ====
-    final Uint8List bytes = await doc.save();
-    final fname = 'task_${task.title.replaceAll(' ', '_')}_${variant.name}.pdf';
+              // ==== Сохранить и ОТКРЫТЬ/СКАЧАТЬ PDF В БРАУЗЕРЕ ====
+              final Uint8List bytes = await doc.save();
+              final fname = 'task_${task.title.replaceAll(' ', '_')}_${variant.name}.pdf';
 
-    final blob = html.Blob([bytes], 'application/pdf');
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final a = html.AnchorElement(href: url)
-      ..target = '_blank'
-      ..download = fname;
-    a.click();
-    html.Url.revokeObjectUrl(url);
-  }
+              final blob = html.Blob([bytes], 'application/pdf');
+              final url = html.Url.createObjectUrlFromBlob(blob);
+              final a = html.AnchorElement(href: url)
+                ..target = '_blank'
+                ..download = fname;
+              a.click();
+              html.Url.revokeObjectUrl(url);
+            }
 
-  pw.PageTheme _theme({bool landscape = false}) => pw.PageTheme(
-        pageFormat: landscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(24),
-      );
+            pw.PageTheme _theme({bool landscape = false}) => pw.PageTheme(
+                  pageFormat: landscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4,
+                  margin: const pw.EdgeInsets.all(24),
+                );
 
-  pw.Widget _checklistTable(
-    List<Subitem> subtasks,
-    List<DateTime> dates,
-    pw.Font fontBase,
-    pw.Font fontBold,
-  ) {
-    final dateFmt = DateFormat('dd.MM');
+            pw.Widget _checklistTable(
+              List<Subitem> subtasks,
+              List<DateTime> dates,
+              pw.Font fontBase,
+              pw.Font fontBold,
+            ) {
+              final dateFmt = DateFormat('dd.MM');
 
-    final headers = <pw.Widget>[
-      pw.Container(
-        padding: const pw.EdgeInsets.all(6),
-        child: pw.Text('Подзадача', style: pw.TextStyle(font: fontBold)),
-      ),
-      ...dates.map(
-        (d) => pw.Center(
-          child: pw.Text(dateFmt.format(d), style: pw.TextStyle(fontSize: 10, font: fontBase)),
-        ),
-      ),
-    ];
-
-    final rows = subtasks.map<pw.TableRow>((s) {
-      return pw.TableRow(
-        children: [
-          pw.Container(
-            padding: const pw.EdgeInsets.all(6),
-            child: pw.Text(s.title, maxLines: 1, style: pw.TextStyle(font: fontBase)),
-          ),
-          ...dates.map(
-            (d) => pw.Container(
-              height: 20,
-              margin: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey600, width: 0.5),
-              ),
-            ),
-          ),
-        ],
-      );
-    }).toList();
-
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey600, width: 0.6),
-      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-      columnWidths: {
-        0: const pw.FlexColumnWidth(3),
-        for (int i = 1; i <= dates.length; i++) i: const pw.FlexColumnWidth(1),
-      },
-      children: [
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-          children: headers,
-        ),
-        ...rows,
-      ],
-    );
-  }
-
-  List<pw.Widget> _detailedBlocks(
-    List<Subitem> items,
-    Map<String, List<Attachment>> attBySub,
-    pw.Font fontBase,
-    pw.Font fontBold,
-  ) {
-    final widgets = <pw.Widget>[];
-
-    for (final s in items) {
-      if (s.type == SubitemType.folder) {
-        widgets.add(
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 12, bottom: 4),
-            child: pw.Text('Папка: ${s.title}', style: pw.TextStyle(font: fontBold, fontSize: 16)),
-          ),
-        );
-        continue;
-      }
-
-      widgets.add(
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(top: 12, bottom: 4),
-          child: pw.Text('Подзадача: ${s.title}', style: pw.TextStyle(font: fontBold, fontSize: 14)),
-        ),
-      );
-
-      if (s.note != null && s.note!.trim().isNotEmpty) {
-        widgets.add(
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 6),
-            child: pw.Text(s.note!, style: pw.TextStyle(font: fontBase)),
-          ),
-        );
-      }
-
-      final atts = attBySub[s.id] ?? const <Attachment>[];
-      final images = atts.where((a) => a.mimeType.startsWith('image/')).toList();
-      final others = atts.where((a) => !a.mimeType.startsWith('image/')).toList();
-
-      if (images.isNotEmpty) {
-        widgets.add(
-          pw.Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: images.map((a) {
-              final img = pw.MemoryImage(a.bytes);
-              return pw.Container(
-                width: 170,
-                height: 128,
-                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey600, width: 0.5)),
-                child: pw.ClipRRect(
-                  verticalRadius: 2,
-                  horizontalRadius: 2,
-                  child: pw.Image(img, fit: pw.BoxFit.cover),
+              final headers = <pw.Widget>[
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(6),
+                  child: pw.Text('Подзадача', style: pw.TextStyle(font: fontBold)),
                 ),
+                ...dates.map(
+                  (d) => pw.Center(
+                    child: pw.Text(dateFmt.format(d), style: pw.TextStyle(fontSize: 10, font: fontBase)),
+                  ),
+                ),
+              ];
+
+              final rows = subtasks.map<pw.TableRow>((s) {
+                return pw.TableRow(
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text(s.title, maxLines: 1, style: pw.TextStyle(font: fontBase)),
+                    ),
+                    ...dates.map(
+                      (d) => pw.Container(
+                        height: 20,
+                        margin: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(color: PdfColors.grey600, width: 0.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList();
+
+              return pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey600, width: 0.6),
+                defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(3),
+                  for (int i = 1; i <= dates.length; i++) i: const pw.FlexColumnWidth(1),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    children: headers,
+                  ),
+                  ...rows,
+                ],
               );
-            }).toList(),
-          ),
-        );
-      }
+            }
 
-      if (others.isNotEmpty) {
-        widgets.add(
-          pw.Padding(
-            padding: const pw.EdgeInsets.only(top: 6),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text('Файлы:', style: pw.TextStyle(font: fontBold)),
-                ...others.map((a) => pw.Text('• ${a.filename}', style: pw.TextStyle(font: fontBase))).toList(),
-              ],
-            ),
-          ),
-        );
-      }
+            List<pw.Widget> _detailedBlocks(
+              List<Subitem> items,
+              Map<String, List<Attachment>> attBySub,
+              pw.Font fontBase,
+              pw.Font fontBold,
+            ) {
+              final widgets = <pw.Widget>[];
 
-      widgets.add(pw.Divider());
-    }
+              for (final s in items) {
+                if (s.type == SubitemType.folder) {
+                  widgets.add(
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(top: 12, bottom: 4),
+                      child: pw.Text('Папка: ${s.title}', style: pw.TextStyle(font: fontBold, fontSize: 16)),
+                    ),
+                  );
+                  continue;
+                }
 
-    return widgets;
-  }
-}
-DART
+                widgets.add(
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 12, bottom: 4),
+                    child: pw.Text('Подзадача: ${s.title}', style: pw.TextStyle(font: fontBold, fontSize: 14)),
+                  ),
+                );
 
-      # 3) Создаём web-папки, если их нет
+                if (s.note != null && s.note!.trim().isNotEmpty) {
+                  widgets.add(
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 6),
+                      child: pw.Text(s.note!, style: pw.TextStyle(font: fontBase)),
+                    ),
+                  );
+                }
+
+                final atts = attBySub[s.id] ?? const <Attachment>[];
+                final images = atts.where((a) => a.mimeType.startsWith('image/')).toList();
+                final others = atts.where((a) => !a.mimeType.startsWith('image/')).toList();
+
+                if (images.isNotEmpty) {
+                  widgets.add(
+                    pw.Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: images.map((a) {
+                        final img = pw.MemoryImage(a.bytes);
+                        return pw.Container(
+                          width: 170,
+                          height: 128,
+                          decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey600, width: 0.5)),
+                          child: pw.ClipRRect(
+                            verticalRadius: 2,
+                            horizontalRadius: 2,
+                            child: pw.Image(img, fit: pw.BoxFit.cover),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  );
+                }
+
+                if (others.isNotEmpty) {
+                  widgets.add(
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(top: 6),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('Файлы:', style: pw.TextStyle(font: fontBold)),
+                          ...others.map((a) => pw.Text('• ${a.filename}', style: pw.TextStyle(font: fontBase))).toList(),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                widgets.add(pw.Divider());
+              }
+
+              return widgets;
+            }
+          }
+          DART
+
+      # === 3) Гарантируем web-папки (идемпотентно) ===
       - name: Ensure web platform
         working-directory: minimal_notes_web
         run: flutter create . --platforms web
 
-      # 4) Скачиваем TTF (вшиваем в ассеты)
+      # === 4) Скачиваем TTF шрифты (в ассеты) ===
       - name: Download NotoSans fonts (Cyrillic)
         working-directory: minimal_notes_web
         run: |
           mkdir -p assets/fonts
           curl -L -o assets/fonts/NotoSans-Regular.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Regular.ttf
           curl -L -o assets/fonts/NotoSans-Bold.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Bold.ttf
-          ls -la assets/fonts
 
       - name: Pub get
         working-directory: minimal_notes_web
@@ -373,12 +374,13 @@ DART
 
       - name: Compute base-href
         id: base
+        shell: bash
         run: |
           REPO_NAME=${GITHUB_REPOSITORY#*/}
           if [[ "$REPO_NAME" == *.github.io ]]; then
-            echo "BASE=/" >> $GITHUB_OUTPUT
+            echo "BASE=/" >> "$GITHUB_OUTPUT"
           else
-            echo "BASE=/$REPO_NAME/" >> $GITHUB_OUTPUT
+            echo "BASE=/$REPO_NAME/" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build web (release)
