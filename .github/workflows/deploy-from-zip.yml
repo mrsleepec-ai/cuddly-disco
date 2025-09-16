@@ -64,6 +64,50 @@ jobs:
           else
             echo "BASE=/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
           fi
+          echo "Using BASE: $BASE"
+
+      # --- ВАЖНО: добавляем плейсхолдер в web/index.html перед сборкой Flutter ---
+      - name: Ensure base placeholder in web/index.html
+        if: steps.detect.outputs.mode == 'flutter'
+        working-directory: ${{ steps.detect.outputs.root }}
+        run: |
+          set -e
+          if [ -f web/index.html ]; then
+            if grep -q '\$FLUTTER_BASE_HREF' web/index.html; then
+              echo "Placeholder already present"
+            elif grep -q '<base ' web/index.html; then
+              sed -i 's|<base[^>]*>|<base href="\$FLUTTER_BASE_HREF">|' web/index.html
+            else
+              sed -i '1s|<head>|<head><base href="\$FLUTTER_BASE_HREF">|' web/index.html
+            fi
+            echo "Patched web/index.html with \$FLUTTER_BASE_HREF"
+          else
+            echo "No web/index.html found; creating minimal index.html"
+            mkdir -p web
+            cat > web/index.html <<'HTML'
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="$FLUTTER_BASE_HREF">
+    <title>Flutter App</title>
+  </head>
+  <body>
+    <script src="flutter.js" defer></script>
+    <script>
+      window.addEventListener('load', function() {
+        _flutter.loader.loadEntrypoint({}).then(function(engineInitializer) {
+          return engineInitializer.initializeEngine();
+        }).then(function(appRunner) {
+          return appRunner.runApp();
+        });
+      });
+    </script>
+  </body>
+</html>
+HTML
+          fi
 
       - name: Setup Flutter
         if: steps.detect.outputs.mode == 'flutter'
