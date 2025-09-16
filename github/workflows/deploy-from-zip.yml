@@ -1,0 +1,97 @@
+name: Deploy From ZIP (Flutter or Static)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages-zip"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Locate ZIP at repo root
+        id: findzip
+        run: |
+          set -e
+          count=$(ls -1 *.zip 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$count" = "0" ]; then
+            echo "❌ No ZIP found at repository root. Upload one and push again." >&2
+            exit 1
+          fi
+          if [ "$count" != "1" ]; then
+            echo "❌ Multiple ZIP files found. Please keep only one ZIP at the root." >&2
+            ls -1 *.zip
+            exit 1
+          fi
+          zipname=$(ls -1 *.zip | head -n1)
+          echo "ZIP=$zipname" >> $GITHUB_OUTPUT
+          echo "Found ZIP: $zipname"
+
+      - name: Unzip payload
+        run: |
+          set -e
+          mkdir -p extracted
+          unzip -q "${{ steps.findzip.outputs.ZIP }}" -d extracted
+          echo "Unzipped."
+
+      - name: Detect mode (Flutter project vs static site)
+        id: detect
+        run: |
+          set -e
+          if [ -f extracted/pubspec.yaml ]; then
+            echo "mode=flutter" >> $GITHUB_OUTPUT
+            echo "Detected Flutter project."
+          elif [ -f extracted/index.html ] || [ -f extracted/build/web/index.html ]; then
+            echo "mode=static" >> $GITHUB_OUTPUT
+            echo "Detected static site."
+          else
+            echo "❌ Neither pubspec.yaml nor index.html found in ZIP." >&2
+            echo "Place either a Flutter project ZIP (with pubspec.yaml) or a ready web bundle (with index.html) at ZIP root." >&2
+            exit 1
+          fi
+
+      - name: Setup Flutter (only for flutter mode)
+        if: steps.detect.outputs.mode == 'flutter'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.3"
+
+      - name: Build Flutter Web (only for flutter mode)
+        if: steps.detect.outputs.mode == 'flutter'
+        working-directory: extracted
+        run: |
+          set -e
+          flutter pub get
+          flutter build web --release
+          echo "OUTDIR=$GITHUB_WORKSPACE/extracted/build/web" >> $GITHUB_ENV
+
+      - name: Choose artifact path (static mode)
+        if: steps.detect.outputs.mode == 'static'
+        run: |
+          set -e
+          if [ -f extracted/index.html ]; then
+            echo "OUTDIR=$GITHUB_WORKSPACE/extracted" >> $GITHUB_ENV
+          else
+            echo "OUTDIR=$GITHUB_WORKSPACE/extracted/build/web" >> $GITHUB_ENV
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.OUTDIR }}
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
