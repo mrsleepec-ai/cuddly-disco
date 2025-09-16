@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y unzip xz-utils
+        run: sudo apt-get update && sudo apt-get install -y unzip xz-utils curl
 
       - name: Unzip project
         run: unzip -o minimal_notes_web.zip
@@ -47,6 +47,61 @@ jobs:
           echo "DIR=$PROJ_DIR" >> "$GITHUB_OUTPUT"
           echo "Project dir: $PROJ_DIR"
 
+      # 🔧 ЧИСТИМ pubspec.yaml: один flutter:, один assets: + шрифты
+      - name: Sanitize pubspec.yaml (dedupe flutter/assets)
+        working-directory: ${{ steps.detect.outputs.DIR }}
+        shell: bash
+        run: |
+          cp pubspec.yaml pubspec.yaml.bak || true
+          PKG_NAME="$(grep -E '^name:' pubspec.yaml | head -n1 | awk '{print $2}')"
+          : "${PKG_NAME:=minimal_notes_web}"
+          cat > pubspec.yaml <<'YML'
+          name: minimal_notes_web
+          description: Minimal notes & tasks app for Web
+          publish_to: "none"
+
+          environment:
+            sdk: ">=3.3.0 <4.0.0"
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            cupertino_icons: ^1.0.8
+            flutter_riverpod: ^2.5.1
+            uuid: ^4.4.0
+            hive: ^2.2.3
+            hive_flutter: ^1.1.0
+            image_picker: ^1.1.2
+            file_picker: ^8.0.2
+            pdf: ^3.11.1
+            printing: ^5.13.1
+            intl: ^0.19.0
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^4.0.0
+
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/
+              - assets/fonts/NotoSans-Regular.ttf
+              - assets/fonts/NotoSans-Bold.ttf
+          YML
+          # Вернём оригинальное имя пакета, если было другое
+          sed -i "s/^name: minimal_notes_web/name: ${PKG_NAME}/" pubspec.yaml
+
+      # ⬇️ Шрифты для кириллицы (если их нет в ассетах архива)
+      - name: Ensure NotoSans fonts (Cyrillic)
+        working-directory: ${{ steps.detect.outputs.DIR }}
+        shell: bash
+        run: |
+          mkdir -p assets/fonts
+          [ -f assets/fonts/NotoSans-Regular.ttf ] || curl -L -o assets/fonts/NotoSans-Regular.ttf https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Regular.ttf
+          [ -f assets/fonts/NotoSans-Bold.ttf ]    || curl -L -o assets/fonts/NotoSans-Bold.ttf    https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Bold.ttf
+          ls -la assets/fonts
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -56,9 +111,14 @@ jobs:
       - name: Enable web
         run: flutter config --enable-web
 
-      - name: Ensure web platform
+      # создаём web только если его нет
+      - name: Ensure web platform (only if missing)
         working-directory: ${{ steps.detect.outputs.DIR }}
-        run: flutter create . --platforms web
+        shell: bash
+        run: |
+          if [ ! -d "web" ]; then
+            flutter create . --platforms web
+          fi
 
       - name: Flutter pub get
         working-directory: ${{ steps.detect.outputs.DIR }}
