@@ -1,0 +1,63 @@
+name: Deploy From ZIP (Smart)
+on:
+  push: { branches: [ main ] }
+  workflow_dispatch:
+permissions: { contents: read, pages: write, id-token: write }
+concurrency: { group: pages-zip-smart, cancel-in-progress: false }
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find one ZIP at repo root
+        id: findzip
+        run: |
+          zips=$(ls -1 *.zip 2>/dev/null || true)
+          [ -z "$zips" ] && { echo "No ZIP at repo root"; exit 1; }
+          n=$(echo "$zips" | wc -l)
+          [ "$n" -ne 1 ] && { echo "Keep exactly one ZIP"; echo "$zips"; exit 1; }
+          echo "ZIP=$(echo "$zips")" >> $GITHUB_OUTPUT
+      - name: Unzip
+        run: mkdir -p extracted && unzip -q "${{ steps.findzip.outputs.ZIP }}" -d extracted
+      - name: Detect project root (pubspec.yaml or index.html)
+        id: detect
+        run: |
+          FLUTTER_PUBSPEC=$(find extracted -maxdepth 4 -name pubspec.yaml | head -n1 || true)
+          INDEX_HTML=$(find extracted -maxdepth 4 -name index.html | head -n1 || true)
+          if [ -n "$FLUTTER_PUBSPEC" ]; then
+            echo "mode=flutter" >> $GITHUB_OUTPUT
+            echo "root=$(dirname "$FLUTTER_PUBSPEC")" >> $GITHUB_OUTPUT
+          elif [ -n "$INDEX_HTML" ]; then
+            echo "mode=static" >> $GITHUB_OUTPUT
+            echo "root=$(dirname "$INDEX_HTML")" >> $GITHUB_OUTPUT
+          else
+            echo "No pubspec.yaml or index.html found in ZIP"; exit 1
+          fi
+      - name: Compute BASE href
+        run: |
+          if [ "${{ github.event.repository.name }}" = "${{ github.repository_owner }}.github.io" ]; then
+            echo "BASE=/" >> $GITHUB_ENV
+          else
+            echo "BASE=/${{ github.event.repository.name }}/" >> $GITHUB_ENV
+          fi
+      - uses: subosito/flutter-action@v2
+        if: steps.detect.outputs.mode == 'flutter'
+        with: { flutter-version: "3.22.3" }
+      - name: Build Flutter Web
+        if: steps.detect.outputs.mode == 'flutter'
+        working-directory: ${{ steps.detect.outputs.root }}
+        run: |
+          flutter pub get
+          flutter build web --release --base-href "$BASE"
+          echo "OUTDIR=${{ steps.detect.outputs.root }}/build/web" >> $GITHUB_ENV
+      - name: Patch base href (static)
+        if: steps.detect.outputs.mode == 'static'
+        working-directory: ${{ steps.detect.outputs.root }}
+        run: |
+          [ -f index.html ] && \
+          (grep -q '<base ' index.html && sed -i 's|<base[^>]*>|<base href="'"$BASE"'">|' index.html || \
+           sed -i '1s|<head>|<head><base href="'"$BASE"'">|' index.html)
+          echo "OUTDIR=${{ steps.detect.outputs.root }}" >> $GITHUB_ENV
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: ${{ env.OUTDIR }} }
+      - uses: actions/deploy-pages@v4
