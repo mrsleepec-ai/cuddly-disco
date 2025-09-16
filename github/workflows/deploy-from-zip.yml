@@ -21,71 +21,78 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Locate ZIP at repo root
+      - name: Find ZIP at repo root
         id: findzip
         run: |
           set -e
-          count=$(ls -1 *.zip 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$count" = "0" ]; then
-            echo "❌ No ZIP found at repository root. Upload one and push again." >&2
-            exit 1
-          fi
-          if [ "$count" != "1" ]; then
-            echo "❌ Multiple ZIP files found. Please keep only one ZIP at the root." >&2
-            ls -1 *.zip
-            exit 1
-          fi
-          zipname=$(ls -1 *.zip | head -n1)
-          echo "ZIP=$zipname" >> $GITHUB_OUTPUT
-          echo "Found ZIP: $zipname"
+          zips=$(ls -1 *.zip 2>/dev/null || true)
+          [ -z "$zips" ] && { echo "❌ No ZIP at repo root"; exit 1; }
+          n=$(echo "$zips" | wc -l)
+          [ "$n" -ne 1 ] && { echo "❌ Keep exactly one ZIP"; echo "$zips"; exit 1; }
+          echo "ZIP=$(echo "$zips")" >> $GITHUB_OUTPUT
+          echo "Found ZIP: $zips"
 
-      - name: Unzip payload
+      - name: Unzip
         run: |
-          set -e
           mkdir -p extracted
           unzip -q "${{ steps.findzip.outputs.ZIP }}" -d extracted
-          echo "Unzipped."
 
-      - name: Detect mode (Flutter project vs static site)
+      - name: Detect project root (pubspec.yaml or index.html)
         id: detect
         run: |
           set -e
-          if [ -f extracted/pubspec.yaml ]; then
+          FLUTTER_PUBSPEC=$(find extracted -maxdepth 4 -type f -name pubspec.yaml | head -n1 || true)
+          INDEX_HTML=$(find extracted -maxdepth 4 -type f -name index.html | head -n1 || true)
+          if [ -n "$FLUTTER_PUBSPEC" ]; then
             echo "mode=flutter" >> $GITHUB_OUTPUT
+            echo "root=$(dirname "$FLUTTER_PUBSPEC")" >> $GITHUB_OUTPUT
             echo "Detected Flutter project."
-          elif [ -f extracted/index.html ] || [ -f extracted/build/web/index.html ]; then
+          elif [ -n "$INDEX_HTML" ]; then
             echo "mode=static" >> $GITHUB_OUTPUT
+            echo "root=$(dirname "$INDEX_HTML")" >> $GITHUB_OUTPUT
             echo "Detected static site."
           else
-            echo "❌ Neither pubspec.yaml nor index.html found in ZIP." >&2
-            echo "Place either a Flutter project ZIP (with pubspec.yaml) or a ready web bundle (with index.html) at ZIP root." >&2
+            echo "❌ Neither pubspec.yaml nor index.html found" >&2
             exit 1
           fi
 
-      - name: Setup Flutter (only for flutter mode)
+      - name: Compute BASE href
+        run: |
+          if [ "${{ github.event.repository.name }}" = "${{ github.repository_owner }}.github.io" ]; then
+            echo "BASE=/" >> $GITHUB_ENV
+          else
+            echo "BASE=/${{ github.event.repository.name }}/" >> $GITHUB_ENV
+          fi
+          echo "Using BASE: $BASE"
+
+      - name: Setup Flutter
         if: steps.detect.outputs.mode == 'flutter'
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.22.3"
 
-      - name: Build Flutter Web (only for flutter mode)
+      - name: Build Flutter Web
         if: steps.detect.outputs.mode == 'flutter'
-        working-directory: extracted
+        working-directory: ${{ steps.detect.outputs.root }}
         run: |
           set -e
           flutter pub get
-          flutter build web --release
-          echo "OUTDIR=$GITHUB_WORKSPACE/extracted/build/web" >> $GITHUB_ENV
+          flutter build web --release --base-href "$BASE"
+          echo "OUTDIR=${{ steps.detect.outputs.root }}/build/web" >> $GITHUB_ENV
 
-      - name: Choose artifact path (static mode)
+      - name: Patch base href for static site
         if: steps.detect.outputs.mode == 'static'
+        working-directory: ${{ steps.detect.outputs.root }}
         run: |
           set -e
-          if [ -f extracted/index.html ]; then
-            echo "OUTDIR=$GITHUB_WORKSPACE/extracted" >> $GITHUB_ENV
-          else
-            echo "OUTDIR=$GITHUB_WORKSPACE/extracted/build/web" >> $GITHUB_ENV
+          if [ -f index.html ]; then
+            if grep -q '<base ' index.html; then
+              sed -i 's|<base[^>]*>|<base href="'"$BASE"'">|' index.html
+            else
+              sed -i '1s|<head>|<head><base href="'"$BASE"'">|' index.html
+            fi
           fi
+          echo "OUTDIR=${{ steps.detect.outputs.root }}" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
