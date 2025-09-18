@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <base href="/cuddly-disco/">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no, interactive-widget=overlays-content" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Minimal Notes</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: var(--flutter-background, #ffffff); }
+      html, body { height: 100%; overflow: hidden; position: fixed; inset: 0; width: 100vw; }
+      @supports (height: 100dvh) { body { height: 100dvh; touch-action: none; } }
+      flt-glass-pane, #flt-glass-pane { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; contain: strict; }
+      @supports not (height: 100dvh) { flt-glass-pane, #flt-glass-pane { height: 100vh !important; } }
+      * { overscroll-behavior: none; }
+      input, textarea { font-size: 16px; }
+    </style>
+    <script>
+      (function(){
+        function lockToTop(){
+          try{
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0,0);
+          }catch(e){}
+        }
+        document.addEventListener('pointerdown', function(){ try{ window.scrollTo(0,0);}catch(e){} }, {passive:false});
+        document.addEventListener('touchmove', function(e){
+          if (!e.target.closest('input, textarea, [contenteditable="true"]')) { e.preventDefault(); }
+        }, {passive:false});
+        window.addEventListener('scroll', function(){ try{ window.scrollTo(0,0);}catch(e){} }, {passive:false});
+        window.addEventListener('focusin', function(e){
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+            lockToTop(); setTimeout(lockToTop, 16);
+            setTimeout(lockToTop, 50);
+            setTimeout(lockToTop, 120);
+            setTimeout(lockToTop, 200);
+            setTimeout(lockToTop, 350);
+            setTimeout(lockToTop, 600);
+          }
+        });
+        if (window.visualViewport) {
+          visualViewport.addEventListener('resize', lockToTop);
+          visualViewport.addEventListener('scroll', lockToTop);
+        }
+      })();
+    </script>
+    <script defer src="flutter.js"></script>
+  </head>
+  <body>
+    <script>
+      window.addEventListener('load', function(ev) {
+        _flutter.loader.loadEntrypoint({
+          onEntrypointLoaded: function(engineInitializer) {
+            engineInitializer.initializeEngine().then(function(appRunner) { appRunner.runApp(); });
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
