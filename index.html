@@ -279,7 +279,7 @@
       </div>
       <div class="footer-actions" style="margin-top:12px;grid-template-columns:repeat(4,minmax(0,1fr));">
         <button id="addBtn">Добавить позицию</button>
-        <button class="secondary" id="seedBtn">Добавить стартовые позиции</button>
+        <button class="secondary" id="seedBtn" style="display:none;">Добавить стартовые позиции</button>
         <button class="secondary" id="exportBtn">Экспорт JSON</button>
         <label class="secondary" style="display:flex;align-items:center;justify-content:center;cursor:pointer;">Импорт JSON
           <input id="importFile" type="file" accept=".json" style="display:none;" />
@@ -350,59 +350,10 @@
     window.addEventListener('orientationchange', lockViewportHeight);
     lockViewportHeight();
 
-    const STORAGE_KEY = 'warehouse-app-v4';
+    const STORAGE_KEY = 'warehouse-app-v5';
     const DEFAULT_CATEGORIES = [];
 
-    const defaultSeedItems = [
-      ['Кабеля', '0.75x3', 'м', 0, 30, '', ''],
-      ['Кабеля', '0.75x4', 'м', 0, 30, '', ''],
-      ['Кабеля', '0.75x7', 'м', 0, 20, '', ''],
-      ['Кабеля', '0.75x12', 'м', 0, 10, '', ''],
-      ['Кабеля', '1x1', 'м', 0, 50, '', 'синий'],
-      ['Кабеля', '1x1', 'м', 0, 50, '', 'красный'],
-      ['Кабеля', '1x1', 'м', 0, 50, '', 'чёрный'],
-      ['Кабеля', '1.5x1', 'м', 0, 50, '', 'чёрный'],
-      ['Кабеля', '2x1.5', 'м', 0, 30, '', ''],
-      ['Кабеля', '4x1.5', 'м', 0, 30, '', ''],
-      ['Кабеля', '4x4', 'м', 0, 20, '', ''],
-      ['Кабеля', '4x6', 'м', 0, 15, '', ''],
-      ['Кабеля', '4x10', 'м', 0, 10, '', ''],
-
-      ['Гофра', '16 мм', 'м', 0, 30, '', 'серая'],
-      ['Гофра', '20 мм', 'м', 0, 25, '', 'серая'],
-      ['Гофра', '25 мм', 'м', 0, 20, '', 'серая'],
-      ['Гофра', '32 мм', 'м', 0, 10, '', 'серая'],
-
-      ['Болты', 'M4', 'шт', 0, 30, '', ''],
-      ['Болты', 'M5', 'шт', 0, 30, '', ''],
-      ['Болты', 'M6', 'шт', 0, 50, '', ''],
-      ['Болты', 'M8', 'шт', 0, 30, '', ''],
-
-      ['Фитинги/ПГА', 'PG7', 'шт', 0, 10, '', ''],
-      ['Фитинги/ПГА', 'PG9', 'шт', 0, 10, '', ''],
-      ['Фитинги/ПГА', 'PG11', 'шт', 0, 10, '', ''],
-      ['Фитинги/ПГА', 'PG13.5', 'шт', 0, 10, '', ''],
-      ['Фитинги/ПГА', 'PG16', 'шт', 0, 10, '', ''],
-      ['Фитинги/ПГА', 'PG21', 'шт', 0, 6, '', ''],
-
-      ['Наконечники НШВ', 'НШВИ 0.75', 'шт', 0, 50, '', ''],
-      ['Наконечники НШВ', 'НШВИ 1.0', 'шт', 0, 50, '', ''],
-      ['Наконечники НШВ', 'НШВИ 1.5', 'шт', 0, 50, '', ''],
-      ['Наконечники НШВ', 'НШВИ 2.5', 'шт', 0, 50, '', ''],
-      ['Наконечники НШВ', 'НШВИ 4', 'шт', 0, 30, '', ''],
-      ['Наконечники НШВ', 'НШВИ 6', 'шт', 0, 20, '', ''],
-      ['Наконечники НШВ', 'НШВИ 10', 'шт', 0, 10, '', ''],
-
-      ['Клеммы', 'Клемма серая 1.5', 'шт', 0, 20, '', ''],
-      ['Клеммы', 'Клемма серая 2.5', 'шт', 0, 20, '', ''],
-      ['Клеммы', 'Клемма серая 4', 'шт', 0, 20, '', ''],
-      ['Клеммы', 'Клемма GNYE 2.5', 'шт', 0, 15, '', 'земля'],
-      ['Клеммы', 'Клемма GNYE 4', 'шт', 0, 15, '', 'земля'],
-      ['Клеммы', 'Клемма красная 1.5', 'шт', 0, 15, '', ''],
-      ['Клеммы', 'Клемма красная 2.5', 'шт', 0, 15, '', ''],
-      ['Клеммы', 'Клемма синяя 2.5', 'шт', 0, 15, '', ''],
-      ['Клеммы', 'Клемма синяя 4', 'шт', 0, 15, '', '']
-    ];
+    const defaultSeedItems = [];
 
     const app = {
       state: loadState(),
@@ -480,12 +431,14 @@
     function renderCategories() {
       const categories = getCategoryList();
       const currentValue = els.category ? els.category.value : '';
+
       if (els.categoryList) {
-        els.categoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+        els.categoryList.innerHTML = categories
+          .map(c => `<option value="${escapeHtml(c)}"></option>`)
+          .join('');
       }
-      if (els.category && !currentValue && categories.length) {
-        els.category.value = categories[0];
-      } else if (els.category && currentValue) {
+
+      if (els.category && currentValue) {
         els.category.value = currentValue;
       }
 
@@ -508,8 +461,6 @@
           app.activeCategory = btn.dataset.cat;
           render();
         });
-      });
-    });
       });
     }
 
