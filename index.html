@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
+  <meta name="app-build" content="20260330161134" />
   <title>Склад</title>
   <style>
     :root{
@@ -61,7 +62,22 @@
     .stat{background:#0f172a; border:1px solid var(--line); border-radius:14px; padding:10px;}
     .stat .n{font-size:22px; font-weight:800;}
     .stat .t{font-size:12px; color:var(--muted);}
-    .tabs{display:flex; gap:8px; overflow:auto; padding-bottom:2px;}
+    
+    .tabs-wrap{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .tabs{
+      display:flex; gap:8px; overflow:auto; padding-bottom:2px; flex:1;
+    }
+    .delete-cat-btn{
+      white-space:nowrap;
+      min-height:42px;
+    }
+
+    .tabs{display:flex; gap:8px; overflow:auto; padding-bottom:2px; flex:1;}
     .tab{white-space:nowrap; background:#0f172a; border:1px solid #475569;}
     .tab.active{background:var(--accent); border-color:var(--accent);}
     .item{
@@ -130,8 +146,11 @@
     
     .print-overlay{
       position:fixed; inset:0; z-index:999;
-      background:#f8fafc; color:#111827;
+      background:#ffffff; color:#111827;
       display:none; overflow:auto;
+      min-height:100dvh;
+      height:100dvh;
+      width:100%;
       padding:
         calc(env(safe-area-inset-top, 0px) + 12px)
         max(12px, env(safe-area-inset-right, 0px))
@@ -143,7 +162,7 @@
       position:sticky; top:0; z-index:2;
       display:flex; gap:8px; flex-wrap:wrap;
       padding:0 0 12px;
-      background:#f8fafc;
+      background:#ffffff;
       border-bottom:1px solid #cbd5e1;
       margin-bottom:12px;
     }
@@ -152,8 +171,9 @@
     }
     .print-doc{
       max-width:900px; margin:0 auto;
-      background:white; border:1px solid #cbd5e1; border-radius:16px;
+      background:#ffffff; border:1px solid #cbd5e1; border-radius:16px;
       padding:18px;
+      min-height:calc(100dvh - 90px);
     }
     .print-doc h1{margin:0 0 6px; font-size:24px; color:#111827;}
     .print-doc .muted{color:#475569; margin-bottom:18px; font-size:12px;}
@@ -166,12 +186,55 @@
     .print-table th,.print-table td{
       text-align:left; border:1px solid #cbd5e1; padding:8px; color:#111827;
     }
+    
+    @media (max-width:720px){
+      .print-overlay{
+        padding:0;
+        background:#ffffff;
+      }
+      .print-bar{
+        padding:
+          calc(env(safe-area-inset-top, 0px) + 10px)
+          max(12px, env(safe-area-inset-right, 0px))
+          10px
+          max(12px, env(safe-area-inset-left, 0px));
+        margin-bottom:0;
+      }
+      .print-doc{
+        min-height:calc(100dvh - 70px);
+        max-width:none;
+        border:0;
+        border-radius:0;
+        padding:16px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);
+      }
+    }
+
     @media print{
       body > .app{display:none !important;}
       .print-overlay{display:block !important; position:static; inset:auto; padding:0; background:white;}
       .print-bar{display:none !important;}
       .print-doc{max-width:none; margin:0; border:0; border-radius:0; padding:0;}
     }
+
+    
+    .update-toast{
+      position:fixed;
+      right:12px;
+      bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
+      left:12px;
+      z-index:1000;
+      display:none;
+      gap:8px;
+      align-items:center;
+      justify-content:space-between;
+      background:rgba(15,23,42,.96);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);
+    }
+    .update-toast.show{display:flex;}
+    .update-toast .msg{font-size:14px; line-height:1.35;}
 
     @media (max-width:720px){
       .shopping-item{
@@ -247,7 +310,7 @@
 
     <section class="panel">
       <h2>Склад</h2>
-      <div class="tabs" id="tabs"></div>
+      <div class="tabs-wrap"><div class="tabs" id="tabs"></div><button class="danger delete-cat-btn" id="deleteCategoryBtn">Удалить категорию</button></div>
       <div class="row" style="margin:12px 0;">
         <input id="search" placeholder="Поиск по названию / месту / примечанию" />
       </div>
@@ -274,6 +337,15 @@
     <div class="print-doc" id="printContent"></div>
   </div>
 
+
+  <div class="update-toast" id="updateToast">
+    <div class="msg">Есть новая версия приложения.</div>
+    <div class="row" style="margin:0;">
+      <button id="reloadAppBtn">Обновить</button>
+      <button class="secondary" id="dismissUpdateBtn">Позже</button>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEY = 'warehouse-clean-v1';
 
@@ -295,6 +367,7 @@
       statNeedBuy: document.getElementById('statNeedBuy'),
       statZero: document.getElementById('statZero'),
       tabs: document.getElementById('tabs'),
+      deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
       search: document.getElementById('search'),
       items: document.getElementById('items'),
       shopping: document.getElementById('shopping'),
@@ -305,12 +378,56 @@
       printContent: document.getElementById('printContent'),
       closePrintBtn: document.getElementById('closePrintBtn'),
       confirmPrintBtn: document.getElementById('confirmPrintBtn'),
+      updateToast: document.getElementById('updateToast'),
+      reloadAppBtn: document.getElementById('reloadAppBtn'),
+      dismissUpdateBtn: document.getElementById('dismissUpdateBtn'),
     };
 
     const app = {
       activeCategory: 'all',
       state: loadState(),
     };
+
+    const APP_BUILD = '20260330161134';
+    let updateDismissedForBuild = '';
+
+    function buildCheckUrl() {
+      const url = new URL(window.location.href);
+      url.searchParams.set('__check', Date.now().toString());
+      return url.toString();
+    }
+
+    function showUpdateToast(nextBuild) {
+      if (updateDismissedForBuild === nextBuild) return;
+      els.updateToast.classList.add('show');
+      els.reloadAppBtn.onclick = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('v', nextBuild);
+        window.location.replace(url.toString());
+      };
+      els.dismissUpdateBtn.onclick = () => {
+        updateDismissedForBuild = nextBuild;
+        els.updateToast.classList.remove('show');
+      };
+    }
+
+    async function checkForAppUpdate() {
+      try {
+        const res = await fetch(buildCheckUrl(), {
+          cache: 'no-store',
+          headers: { 'cache-control': 'no-cache' }
+        });
+        const text = await res.text();
+        const match = text.match(/<meta\s+name=["']app-build["']\s+content=["']([^"']+)["']/i);
+        const remoteBuild = match ? match[1] : '';
+        if (remoteBuild && remoteBuild !== APP_BUILD) {
+          showUpdateToast(remoteBuild);
+        }
+      } catch (e) {
+        // ignore network/cache check failures
+      }
+    }
+
 
     function uid() {
       return Math.random().toString(36).slice(2, 10);
@@ -384,7 +501,14 @@
       els.location.value = '';
       els.note.value = '';
       saveState();
-      render();
+  
+    window.addEventListener('focus', checkForAppUpdate);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForAppUpdate();
+    });
+    setTimeout(checkForAppUpdate, 1500);
+
+    render();
     }
 
     function addDemo() {
@@ -515,6 +639,33 @@
       render();
     }
 
+    function deleteCurrentCategory() {
+      if (!app.activeCategory || app.activeCategory === 'all') {
+        alert('Сначала выбери конкретную категорию.');
+        return;
+      }
+
+      const category = app.activeCategory;
+      const itemsInCategory = app.state.items.filter(x => x.category === category);
+
+      if (!itemsInCategory.length) {
+        app.activeCategory = 'all';
+        saveState();
+        render();
+        return;
+      }
+
+      const confirmed = confirm(`Удалить категорию "${category}" и все позиции внутри неё?`);
+      if (!confirmed) return;
+
+      const ids = new Set(itemsInCategory.map(x => x.id));
+      app.state.items = app.state.items.filter(x => x.category !== category);
+      app.state.shopping = app.state.shopping.filter(x => !ids.has(x.itemId) && x.category !== category);
+      app.activeCategory = 'all';
+      saveState();
+      render();
+    }
+
     function renderTabs() {
       const categories = getCategories();
 
@@ -522,12 +673,15 @@
 
       if (!categories.length) {
         els.tabs.innerHTML = '<div class="empty">Категории появятся после добавления первой позиции.</div>';
+        els.deleteCategoryBtn.style.display = 'none';
         return;
       }
 
       if (app.activeCategory !== 'all' && !categories.includes(app.activeCategory)) {
         app.activeCategory = 'all';
       }
+
+      els.deleteCategoryBtn.style.display = app.activeCategory !== 'all' ? 'inline-flex' : 'none';
 
       const buttons = [
         `<button class="tab ${app.activeCategory === 'all' ? 'active' : ''}" data-cat="all">Все</button>`,
@@ -731,6 +885,7 @@
     els.fillShoppingBtn.addEventListener('click', addProblemToShopping);
     els.clearShoppingBtn.addEventListener('click', clearShopping);
     els.pdfShoppingBtn.addEventListener('click', exportShoppingPdf);
+    els.deleteCategoryBtn.addEventListener('click', deleteCurrentCategory);
     els.closePrintBtn.addEventListener('click', closePrintOverlay);
     els.confirmPrintBtn.addEventListener('click', () => window.print());
     els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
