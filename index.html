@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Склад" />
+  <title>Складской учёт</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a2f;
+      --panel-2: #17213c;
+      --text: #edf2f7;
+      --muted: #99a3b3;
+      --line: #27314f;
+      --ok: #14532d;
+      --warn: #854d0e;
+      --buy: #991b1b;
+      --none: #450a0a;
+      --accent: #2563eb;
+      --chip: #1f2a44;
+      --shadow: 0 12px 32px rgba(0,0,0,.28);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(180deg, #09111f 0%, #0d1528 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 16px 14px 90px;
+    }
+    .hero {
+      background: linear-gradient(135deg, #1d4ed8, #111827 70%);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .hero h1 { margin: 0 0 6px; font-size: 28px; }
+    .hero p { margin: 0; color: #dbe4f3; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
+      padding: 14px;
+      backdrop-filter: blur(8px);
+    }
+    .card .label { color: #d5deea; font-size: 13px; }
+    .card .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .toolbar, .grid {
+      display: grid;
+      gap: 14px;
+    }
+    .toolbar {
+      grid-template-columns: 1.1fr .9fr;
+      margin-bottom: 14px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    h2, h3 { margin: 0 0 12px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #33405f;
+      background: #0f172a;
+      color: var(--text);
+      padding: 12px 12px;
+      font-size: 14px;
+    }
+    textarea { min-height: 84px; resize: vertical; }
+    button {
+      background: var(--accent);
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .08s ease, opacity .2s ease;
+    }
+    button:active { transform: scale(.99); }
+    button.secondary { background: #1e293b; border: 1px solid #33405f; }
+    button.ghost { background: transparent; border: 1px dashed #475569; }
+    .grid { grid-template-columns: 1.3fr .9fr; }
+    .search-row {
+      display: grid;
+      grid-template-columns: 1.1fr .7fr .6fr .6fr .6fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .tab {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--chip);
+      color: var(--text);
+      border: 1px solid #33405f;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .tab.active { background: var(--accent); border-color: transparent; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: #cbd5e1; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .ok { background: rgba(34,197,94,.16); color: #86efac; }
+    .low { background: rgba(250,204,21,.16); color: #fde68a; }
+    .buy { background: rgba(248,113,113,.16); color: #fca5a5; }
+    .none { background: rgba(127,29,29,.35); color: #fecaca; }
+    .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .small-btn {
+      width: auto;
+      padding: 8px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+    .muted { color: var(--muted); }
+    .list-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      background: var(--panel-2);
+      margin-bottom: 10px;
+    }
+    .pill-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .pill {
+      border: 1px solid #33405f;
+      background: #0f172a;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: #d4dce8;
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+      border: 1px dashed #33405f;
+      border-radius: 16px;
+    }
+    .footer-actions {
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    @media (max-width: 980px) {
+      .stats, .toolbar, .grid, .search-row { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .footer-actions { grid-template-columns: 1fr; }
+      .card .value { font-size: 22px; }
+      .hero h1 { font-size: 24px; }
+      table { display:block; overflow:auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Складской учёт</h1>
+      <p>Позиции, остатки, закупка и быстрый контроль по категориям. Всё хранится прямо в браузере на телефоне.</p>
+      <div class="stats">
+        <div class="card"><div class="label">Всего позиций</div><div class="value" id="statItems">0</div></div>
+        <div class="card"><div class="label">Нужно купить</div><div class="value" id="statBuy">0</div></div>
+        <div class="card"><div class="label">Категорий</div><div class="value" id="statCats">0</div></div>
+        <div class="card"><div class="label">Покупок в списке</div><div class="value" id="statShopping">0</div></div>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="panel">
+        <h2>Добавить позицию</h2>
+        <div class="form-grid">
+          <div>
+            <label>Категория</label>
+            <select id="category"></select>
+          </div>
+          <div>
+            <label>Наименование</label>
+            <input id="name" placeholder="Например: 0.75x3" />
+          </div>
+          <div>
+            <label>Ед. изм.</label>
+            <select id="unit">
+              <option value="м">м</option>
+              <option value="шт">шт</option>
+              <option value="уп">уп</option>
+            </select>
+          </div>
+          <div>
+            <label>Текущий остаток</label>
+            <input id="qty" type="number" min="0" step="0.01" placeholder="0" />
+          </div>
+          <div>
+            <label>Минимальный остаток</label>
+            <input id="minQty" type="number" min="0" step="0.01" placeholder="0" />
+          </div>
+          <div>
+            <label>Место хранения</label>
+            <input id="location" placeholder="Стеллаж, ящик, полка" />
+          </div>
+          <div class="full">
+            <label>Примечание</label>
+            <textarea id="note" placeholder="Цвет, тип, размер, серия и т.д."></textarea>
+          </div>
+          <div class="full"><button id="addBtn">Сохранить позицию</button></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Быстрые действия</h2>
+        <div class="pill-row">
+          <button class="secondary" id="seedBtn">Заполнить стартовыми позициями</button>
+          <button class="secondary" id="exportBtn">Экспорт JSON</button>
+          <button class="secondary" id="printBuyBtn">Печать списка закупки</button>
+          <button class="ghost" id="clearBtn">Очистить всё</button>
+        </div>
+        <div style="margin-top:12px">
+          <label>Импорт из JSON</label>
+          <input type="file" id="importFile" accept="application/json" />
+        </div>
+        <div class="pill-row" style="margin-top:12px">
+          <div class="pill">Зелёный — НОРМА</div>
+          <div class="pill">Жёлтый — МАЛО</div>
+          <div class="pill">Красный — КУПИТЬ</div>
+          <div class="pill">Тёмный — НЕТ</div>
+        </div>
+        <p class="muted" style="margin:12px 0 0">На iPhone открой сайт в Safari → Поделиться → Добавить на экран Домой → включи «Открывать как веб‑приложение».</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Склад</h2>
+        <div class="tabs" id="tabs"></div>
+        <div class="search-row">
+          <input id="search" placeholder="Поиск по названию, примечанию, месту" />
+          <select id="statusFilter">
+            <option value="all">Все статусы</option>
+            <option value="ok">Норма</option>
+            <option value="low">Мало</option>
+            <option value="buy">Купить</option>
+            <option value="none">Нет</option>
+          </select>
+          <select id="sortBy">
+            <option value="name">Сортировка: название</option>
+            <option value="status">Сортировка: статус</option>
+            <option value="qty">Сортировка: остаток</option>
+            <option value="category">Сортировка: категория</option>
+          </select>
+          <button class="secondary" id="showAllBtn">Все категории</button>
+          <button class="secondary" id="shoppingFromLowBtn">В закупку всё проблемное</button>
+        </div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Позиция</th>
+                <th>Остаток</th>
+                <th>Мин.</th>
+                <th>Где лежит</th>
+                <th>Статус</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Список закупки</h2>
+        <div id="shoppingList"></div>
+        <div class="footer-actions">
+          <button class="secondary" id="copyBuyBtn">Скопировать список</button>
+          <button class="secondary" id="markBoughtBtn">Пометить купленным</button>
+          <button class="ghost" id="clearBuyBtn">Очистить список</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'warehouse-app-v1';
+    const DEFAULT_CATEGORIES = ['Кабеля', 'Гофра', 'Болты', 'Фитинги/ПГА', 'Наконечники НШВ', 'Клеммы'];
+
+    const defaultSeedItems = [
+      ['Кабеля', '0.75x3', 'м', 0, 30, '', ''],
+      ['Кабеля', '0.75x4', 'м', 0, 30, '', ''],
+      ['Кабеля', '0.75x7', 'м', 0, 20, '', ''],
+      ['Кабеля', '0.75x12', 'м', 0, 10, '', ''],
+      ['Кабеля', '1x1', 'м', 0, 50, '', 'синий'],
+      ['Кабеля', '1x1', 'м', 0, 50, '', 'красный'],
+      ['Кабеля', '1x1', 'м', 0, 50, '', 'чёрный'],
+      ['Кабеля', '1.5x1', 'м', 0, 50, '', 'чёрный'],
+      ['Кабеля', '2x1.5', 'м', 0, 30, '', ''],
+      ['Кабеля', '4x1.5', 'м', 0, 30, '', ''],
+      ['Кабеля', '4x4', 'м', 0, 20, '', ''],
+      ['Кабеля', '4x6', 'м', 0, 15, '', ''],
+      ['Кабеля', '4x10', 'м', 0, 10, '', ''],
+
+      ['Гофра', '16 мм', 'м', 0, 30, '', 'серая'],
+      ['Гофра', '20 мм', 'м', 0, 25, '', 'серая'],
+      ['Гофра', '25 мм', 'м', 0, 20, '', 'серая'],
+      ['Гофра', '32 мм', 'м', 0, 10, '', 'серая'],
+
+      ['Болты', 'M4', 'шт', 0, 30, '', ''],
+      ['Болты', 'M5', 'шт', 0, 30, '', ''],
+      ['Болты', 'M6', 'шт', 0, 50, '', ''],
+      ['Болты', 'M8', 'шт', 0, 30, '', ''],
+
+      ['Фитинги/ПГА', 'PG7', 'шт', 0, 10, '', ''],
+      ['Фитинги/ПГА', 'PG9', 'шт', 0, 10, '', ''],
+      ['Фитинги/ПГА', 'PG11', 'шт', 0, 10, '', ''],
+      ['Фитинги/ПГА', 'PG13.5', 'шт', 0, 10, '', ''],
+      ['Фитинги/ПГА', 'PG16', 'шт', 0, 10, '', ''],
+      ['Фитинги/ПГА', 'PG21', 'шт', 0, 6, '', ''],
+
+      ['Наконечники НШВ', 'НШВИ 0.75', 'шт', 0, 50, '', ''],
+      ['Наконечники НШВ', 'НШВИ 1.0', 'шт', 0, 50, '', ''],
+      ['Наконечники НШВ', 'НШВИ 1.5', 'шт', 0, 50, '', ''],
+      ['Наконечники НШВ', 'НШВИ 2.5', 'шт', 0, 50, '', ''],
+      ['Наконечники НШВ', 'НШВИ 4', 'шт', 0, 30, '', ''],
+      ['Наконечники НШВ', 'НШВИ 6', 'шт', 0, 20, '', ''],
+      ['Наконечники НШВ', 'НШВИ 10', 'шт', 0, 10, '', ''],
+
+      ['Клеммы', 'Клемма серая 1.5', 'шт', 0, 20, '', ''],
+      ['Клеммы', 'Клемма серая 2.5', 'шт', 0, 20, '', ''],
+      ['Клеммы', 'Клемма серая 4', 'шт', 0, 20, '', ''],
+      ['Клеммы', 'Клемма GNYE 2.5', 'шт', 0, 15, '', 'земля'],
+      ['Клеммы', 'Клемма GNYE 4', 'шт', 0, 15, '', 'земля'],
+      ['Клеммы', 'Клемма красная 1.5', 'шт', 0, 15, '', ''],
+      ['Клеммы', 'Клемма красная 2.5', 'шт', 0, 15, '', ''],
+      ['Клеммы', 'Клемма синяя 2.5', 'шт', 0, 15, '', ''],
+      ['Клеммы', 'Клемма синяя 4', 'шт', 0, 15, '', '']
+    ];
+
+    const app = {
+      state: loadState(),
+      activeCategory: 'all'
+    };
+
+    const els = {
+      category: document.getElementById('category'),
+      name: document.getElementById('name'),
+      unit: document.getElementById('unit'),
+      qty: document.getElementById('qty'),
+      minQty: document.getElementById('minQty'),
+      location: document.getElementById('location'),
+      note: document.getElementById('note'),
+      addBtn: document.getElementById('addBtn'),
+      tabs: document.getElementById('tabs'),
+      itemsBody: document.getElementById('itemsBody'),
+      shoppingList: document.getElementById('shoppingList'),
+      search: document.getElementById('search'),
+      statusFilter: document.getElementById('statusFilter'),
+      sortBy: document.getElementById('sortBy'),
+      statItems: document.getElementById('statItems'),
+      statBuy: document.getElementById('statBuy'),
+      statCats: document.getElementById('statCats'),
+      statShopping: document.getElementById('statShopping'),
+      showAllBtn: document.getElementById('showAllBtn'),
+      shoppingFromLowBtn: document.getElementById('shoppingFromLowBtn'),
+      seedBtn: document.getElementById('seedBtn'),
+      exportBtn: document.getElementById('exportBtn'),
+      importFile: document.getElementById('importFile'),
+      clearBtn: document.getElementById('clearBtn'),
+      copyBuyBtn: document.getElementById('copyBuyBtn'),
+      markBoughtBtn: document.getElementById('markBoughtBtn'),
+      clearBuyBtn: document.getElementById('clearBuyBtn'),
+      printBuyBtn: document.getElementById('printBuyBtn')
+    };
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { return JSON.parse(raw); } catch (_) {}
+      }
+      return { items: [], shopping: [], categories: [...DEFAULT_CATEGORIES] };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
+    }
+
+    function uid() {
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function getStatus(item) {
+      const qty = Number(item.qty || 0);
+      const min = Number(item.minQty || 0);
+      if (qty <= 0) return { key: 'none', label: 'НЕТ', cls: 'none', rank: 0 };
+      if (qty <= min) return { key: 'buy', label: 'КУПИТЬ', cls: 'buy', rank: 1 };
+      if (qty <= min * 1.5) return { key: 'low', label: 'МАЛО', cls: 'low', rank: 2 };
+      return { key: 'ok', label: 'НОРМА', cls: 'ok', rank: 3 };
+    }
+
+    function renderCategories() {
+      els.category.innerHTML = app.state.categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      els.tabs.innerHTML = app.state.categories.map(c => `
+        <button class="tab ${app.activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>
+      `).join('');
+      [...els.tabs.querySelectorAll('.tab')].forEach(btn => {
+        btn.addEventListener('click', () => {
+          app.activeCategory = btn.dataset.cat;
+          render();
+        });
+      });
+    }
+
+    function filteredItems() {
+      const q = els.search.value.trim().toLowerCase();
+      const sf = els.statusFilter.value;
+      const sort = els.sortBy.value;
+      let items = [...app.state.items];
+      if (app.activeCategory !== 'all') items = items.filter(i => i.category === app.activeCategory);
+      if (q) {
+        items = items.filter(i => [i.name, i.note, i.location, i.category].join(' ').toLowerCase().includes(q));
+      }
+      if (sf !== 'all') {
+        items = items.filter(i => getStatus(i).key === sf);
+      }
+      items.sort((a, b) => {
+        if (sort === 'status') return getStatus(a).rank - getStatus(b).rank;
+        if (sort === 'qty') return Number(a.qty) - Number(b.qty);
+        if (sort === 'category') return a.category.localeCompare(b.category, 'ru');
+        return a.name.localeCompare(b.name, 'ru');
+      });
+      return items;
+    }
+
+    function renderItems() {
+      const items = filteredItems();
+      if (!items.length) {
+        els.itemsBody.innerHTML = `<tr><td colspan="6"><div class="empty">Пока ничего не найдено.</div></td></tr>`;
+        return;
+      }
+      els.itemsBody.innerHTML = items.map(item => {
+        const status = getStatus(item);
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(item.name)}</strong><br />
+              <span class="muted">${escapeHtml(item.category)}${item.note ? ' · ' + escapeHtml(item.note) : ''}</span>
+            </td>
+            <td>${formatNum(item.qty)} ${escapeHtml(item.unit)}</td>
+            <td>${formatNum(item.minQty)} ${escapeHtml(item.unit)}</td>
+            <td>${escapeHtml(item.location || '—')}</td>
+            <td><span class="badge ${status.cls}">${status.label}</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="small-btn secondary" onclick="changeQty('${item.id}', -1)">-1</button>
+                <button class="small-btn secondary" onclick="changeQty('${item.id}', 1)">+1</button>
+                <button class="small-btn secondary" onclick="addToShopping('${item.id}')">В закупку</button>
+                <button class="small-btn ghost" onclick="deleteItem('${item.id}')">Удалить</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderShopping() {
+      if (!app.state.shopping.length) {
+        els.shoppingList.innerHTML = `<div class="empty">Список закупки пуст.</div>`;
+        return;
+      }
+      els.shoppingList.innerHTML = app.state.shopping.map(s => `
+        <div class="list-item">
+          <div>
+            <strong>${escapeHtml(s.name)}</strong>
+            <div class="muted">${escapeHtml(s.category)} · Нужно: ${formatNum(s.need)} ${escapeHtml(s.unit)}</div>
+            ${s.note ? `<div class="muted">${escapeHtml(s.note)}</div>` : ''}
+          </div>
+          <div class="row-actions">
+            <button class="small-btn secondary" onclick="changeNeed('${s.id}', -1)">-1</button>
+            <button class="small-btn secondary" onclick="changeNeed('${s.id}', 1)">+1</button>
+            <button class="small-btn ghost" onclick="removeShopping('${s.id}')">Убрать</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderStats() {
+      const all = app.state.items;
+      const needBuy = all.filter(i => ['buy', 'none'].includes(getStatus(i).key)).length;
+      els.statItems.textContent = all.length;
+      els.statBuy.textContent = needBuy;
+      els.statCats.textContent = app.state.categories.length;
+      els.statShopping.textContent = app.state.shopping.length;
+    }
+
+    function render() {
+      renderCategories();
+      renderItems();
+      renderShopping();
+      renderStats();
+      saveState();
+    }
+
+    function addItem() {
+      const name = els.name.value.trim();
+      if (!name) return alert('Напиши название позиции.');
+      const item = {
+        id: uid(),
+        category: els.category.value,
+        name,
+        unit: els.unit.value,
+        qty: Number(els.qty.value || 0),
+        minQty: Number(els.minQty.value || 0),
+        location: els.location.value.trim(),
+        note: els.note.value.trim()
+      };
+      app.state.items.push(item);
+      els.name.value = '';
+      els.qty.value = '';
+      els.minQty.value = '';
+      els.location.value = '';
+      els.note.value = '';
+      render();
+    }
+
+    function deleteItem(id) {
+      if (!confirm('Удалить позицию?')) return;
+      app.state.items = app.state.items.filter(i => i.id !== id);
+      app.state.shopping = app.state.shopping.filter(i => i.itemId !== id);
+      render();
+    }
+
+    function changeQty(id, delta) {
+      const item = app.state.items.find(i => i.id === id);
+      if (!item) return;
+      item.qty = Math.max(0, Number(item.qty) + delta);
+      render();
+    }
+
+    function addToShopping(id) {
+      const item = app.state.items.find(i => i.id === id);
+      if (!item) return;
+      const existing = app.state.shopping.find(s => s.itemId === id);
+      const deficit = Math.max(1, Number(item.minQty || 0) - Number(item.qty || 0) || 1);
+      if (existing) {
+        existing.need += deficit;
+      } else {
+        app.state.shopping.push({
+          id: uid(),
+          itemId: id,
+          category: item.category,
+          name: item.name,
+          unit: item.unit,
+          note: item.note,
+          need: deficit
+        });
+      }
+      render();
+    }
+
+    function changeNeed(id, delta) {
+      const row = app.state.shopping.find(s => s.id === id);
+      if (!row) return;
+      row.need = Math.max(1, Number(row.need) + delta);
+      render();
+    }
+
+    function removeShopping(id) {
+      app.state.shopping = app.state.shopping.filter(s => s.id !== id);
+      render();
+    }
+
+    function addAllProblemToShopping() {
+      app.state.items
+        .filter(i => ['buy', 'none', 'low'].includes(getStatus(i).key))
+        .forEach(i => addToShopping(i.id));
+    }
+
+    function fillSeed() {
+      if (!confirm('Добавить стартовые позиции? Уже существующие данные останутся.')) return;
+      const existingKeys = new Set(app.state.items.map(i => `${i.category}|${i.name}|${i.note}`));
+      defaultSeedItems.forEach(([category, name, unit, qty, minQty, location, note]) => {
+        const key = `${category}|${name}|${note}`;
+        if (!existingKeys.has(key)) {
+          app.state.items.push({ id: uid(), category, name, unit, qty, minQty, location, note });
+        }
+      });
+      render();
+    }
+
+    function clearAll() {
+      if (!confirm('Это удалит все позиции и список закупки. Продолжить?')) return;
+      app.state = { items: [], shopping: [], categories: [...DEFAULT_CATEGORIES] };
+      app.activeCategory = 'all';
+      render();
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(app.state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'warehouse-data.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importJson(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data.items || !data.shopping || !data.categories) throw new Error();
+          app.state = data;
+          render();
+        } catch {
+          alert('Не удалось импортировать файл.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    async function copyShopping() {
+      const text = app.state.shopping.map(s => `• ${s.name} — ${formatNum(s.need)} ${s.unit} (${s.category})`).join('\n');
+      if (!text) return alert('Список закупки пуст.');
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Список закупки скопирован.');
+      } catch {
+        alert(text);
+      }
+    }
+
+    function markBought() {
+      if (!app.state.shopping.length) return;
+      app.state.shopping.forEach(s => {
+        const item = app.state.items.find(i => i.id === s.itemId);
+        if (item) item.qty = Number(item.qty) + Number(s.need);
+      });
+      app.state.shopping = [];
+      render();
+    }
+
+    function printShopping() {
+      const text = app.state.shopping.map(s => `${s.name} — ${formatNum(s.need)} ${s.unit} (${s.category})`).join('<br>') || 'Список пуст';
+      const win = window.open('', '_blank');
+      win.document.write(`<html><head><title>Список закупки</title></head><body style="font-family:sans-serif;padding:20px"><h1>Список закупки</h1><div>${text}</div></body></html>`);
+      win.document.close();
+      win.print();
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function formatNum(v) {
+      const n = Number(v || 0);
+      return Number.isInteger(n) ? String(n) : n.toFixed(2);
+    }
+
+    els.addBtn.addEventListener('click', addItem);
+    els.search.addEventListener('input', renderItems);
+    els.statusFilter.addEventListener('change', renderItems);
+    els.sortBy.addEventListener('change', renderItems);
+    els.showAllBtn.addEventListener('click', () => { app.activeCategory = 'all'; render(); });
+    els.shoppingFromLowBtn.addEventListener('click', addAllProblemToShopping);
+    els.seedBtn.addEventListener('click', fillSeed);
+    els.exportBtn.addEventListener('click', exportJson);
+    els.clearBtn.addEventListener('click', clearAll);
+    els.importFile.addEventListener('change', e => e.target.files[0] && importJson(e.target.files[0]));
+    els.copyBuyBtn.addEventListener('click', copyShopping);
+    els.markBoughtBtn.addEventListener('click', markBought);
+    els.clearBuyBtn.addEventListener('click', () => { app.state.shopping = []; render(); });
+    els.printBuyBtn.addEventListener('click', printShopping);
+
+    window.changeQty = changeQty;
+    window.addToShopping = addToShopping;
+    window.deleteItem = deleteItem;
+    window.changeNeed = changeNeed;
+    window.removeShopping = removeShopping;
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    }
+
+    render();
+  </script>
+</body>
+</html>
