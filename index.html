@@ -313,6 +313,7 @@
       <div class="tabs-wrap"><div class="tabs" id="tabs"></div><button class="danger delete-cat-btn" id="deleteCategoryBtn">Удалить категорию</button></div>
       <div class="row" style="margin:12px 0;">
         <input id="search" placeholder="Поиск по названию / месту / примечанию" />
+        <button class="ghost" id="exportStockExcelBtn">Экспорт склада в Excel</button>
       </div>
       <div id="items"></div>
     </section>
@@ -323,6 +324,7 @@
         <button id="fillShoppingBtn">Добавить всё проблемное</button>
         <button class="secondary" id="clearShoppingBtn">Очистить список</button>
         <button class="ghost" id="pdfShoppingBtn">Скачать PDF</button>
+        <button class="ghost" id="exportShoppingExcelBtn">Экспорт закупки в Excel</button>
       </div>
       <div id="shopping"></div>
     </section>
@@ -369,11 +371,13 @@
       tabs: document.getElementById('tabs'),
       deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
       search: document.getElementById('search'),
+      exportStockExcelBtn: document.getElementById('exportStockExcelBtn'),
       items: document.getElementById('items'),
       shopping: document.getElementById('shopping'),
       fillShoppingBtn: document.getElementById('fillShoppingBtn'),
       clearShoppingBtn: document.getElementById('clearShoppingBtn'),
       pdfShoppingBtn: document.getElementById('pdfShoppingBtn'),
+      exportShoppingExcelBtn: document.getElementById('exportShoppingExcelBtn'),
       printOverlay: document.getElementById('printOverlay'),
       printContent: document.getElementById('printContent'),
       closePrintBtn: document.getElementById('closePrintBtn'),
@@ -811,6 +815,86 @@
       });
     }
 
+    function csvEscape(value) {
+      const text = String(value ?? '');
+      return '"' + text.replaceAll('"', '""') + '"';
+    }
+
+    function downloadCsv(filename, headers, rows) {
+      const content = [
+        headers.map(csvEscape).join(';'),
+        ...rows.map(row => row.map(csvEscape).join(';'))
+      ].join('\n');
+
+      const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportStockExcel() {
+      const rows = [...app.state.items]
+        .sort((a, b) => {
+          const cat = String(a.category || '').localeCompare(String(b.category || ''), 'ru');
+          if (cat !== 0) return cat;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+        })
+        .map(item => {
+          const s = statusFor(item);
+          return [
+            item.category || '',
+            item.name || '',
+            item.unit || '',
+            Number(item.qty || 0),
+            Number(item.minQty || 0),
+            s.text,
+            item.location || '',
+            item.note || ''
+          ];
+        });
+
+      if (!rows.length) {
+        alert('Склад пуст.');
+        return;
+      }
+
+      downloadCsv(
+        'sklad_export.csv',
+        ['Категория', 'Наименование', 'Ед. изм.', 'Остаток', 'Мин. остаток', 'Статус', 'Где лежит', 'Примечание'],
+        rows
+      );
+    }
+
+    function exportShoppingExcel() {
+      if (!app.state.shopping.length) {
+        alert('Список закупки пуст.');
+        return;
+      }
+
+      const rows = [...app.state.shopping]
+        .sort((a, b) => {
+          const cat = String(a.category || '').localeCompare(String(b.category || ''), 'ru');
+          if (cat !== 0) return cat;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+        })
+        .map(row => [
+          row.category || '',
+          row.name || '',
+          row.buyQty === '' ? '' : Number(row.buyQty || 0),
+          row.unit || 'шт',
+          row.note || ''
+        ]);
+
+      downloadCsv(
+        'shopping_list_export.csv',
+        ['Категория', 'Наименование', 'Кол-во к покупке', 'Ед. изм.', 'Примечание'],
+        rows
+      );
+    }
+
     function buildShoppingPrintHtml() {
       const groups = {};
       app.state.shopping.forEach(row => {
@@ -882,9 +966,11 @@
     els.exportBtn.addEventListener('click', exportData);
     els.importFile.addEventListener('change', importData);
     els.search.addEventListener('input', renderItems);
+    els.exportStockExcelBtn.addEventListener('click', exportStockExcel);
     els.fillShoppingBtn.addEventListener('click', addProblemToShopping);
     els.clearShoppingBtn.addEventListener('click', clearShopping);
     els.pdfShoppingBtn.addEventListener('click', exportShoppingPdf);
+    els.exportShoppingExcelBtn.addEventListener('click', exportShoppingExcel);
     els.deleteCategoryBtn.addEventListener('click', deleteCurrentCategory);
     els.closePrintBtn.addEventListener('click', closePrintOverlay);
     els.confirmPrintBtn.addEventListener('click', () => window.print());
