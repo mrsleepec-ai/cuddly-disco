@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -26,18 +26,39 @@
       --shadow: 0 12px 32px rgba(0,0,0,.28);
       --radius: 18px;
     }
-    * { box-sizing: border-box; }
-    body {
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
       margin: 0;
+      padding: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      background: #09111f;
+      overscroll-behavior: none;
+    }
+    body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(180deg, #09111f 0%, #0d1528 100%);
       color: var(--text);
-      min-height: 100vh;
+      height: 100dvh;
+      position: fixed;
+      inset: 0;
+      touch-action: manipulation;
+    }
+    .app-shell {
+      height: 100dvh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: linear-gradient(180deg, #09111f 0%, #0d1528 100%);
     }
     .wrap {
       max-width: 1180px;
       margin: 0 auto;
-      padding: 16px 14px 90px;
+      padding:
+        calc(env(safe-area-inset-top, 0px) + 12px)
+        max(14px, env(safe-area-inset-right, 0px))
+        calc(env(safe-area-inset-bottom, 0px) + 90px)
+        max(14px, env(safe-area-inset-left, 0px));
     }
     .hero {
       background: linear-gradient(135deg, #1d4ed8, #111827 70%);
@@ -202,84 +223,70 @@
       .footer-actions { grid-template-columns: 1fr; }
       .card .value { font-size: 22px; }
       .hero h1 { font-size: 24px; }
-      table { display:block; overflow:auto; }
+      table { display:block; width:100%; overflow-x:auto; }
+    }
+    @media (max-width: 640px) {
+      .hero { border-radius: 20px; padding: 16px; }
+      .panel { border-radius: 16px; padding: 12px; }
+      .search-row { gap: 8px; }
+      th, td { padding: 9px 6px; }
     }
   </style>
 </head>
 <body>
+  <div class="app-shell">
   <div class="wrap">
-    <section class="hero">
-      <h1>Складской учёт</h1>
-      <p>Позиции, остатки, закупка и быстрый контроль по категориям. Всё хранится прямо в браузере на телефоне.</p>
-      <div class="stats">
-        <div class="card"><div class="label">Всего позиций</div><div class="value" id="statItems">0</div></div>
-        <div class="card"><div class="label">Нужно купить</div><div class="value" id="statBuy">0</div></div>
-        <div class="card"><div class="label">Категорий</div><div class="value" id="statCats">0</div></div>
-        <div class="card"><div class="label">Покупок в списке</div><div class="value" id="statShopping">0</div></div>
+    
+
+    
+    <section class="panel" style="margin-bottom:14px;">
+      <h2>Добавить позицию</h2>
+      <div class="form-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+        <div>
+          <label for="category">Категория</label>
+          <input id="category" list="categoryList" placeholder="Например: Кабеля, Клеммы, Инструмент" />
+          <datalist id="categoryList"></datalist>
+        </div>
+        <div>
+          <label for="name">Наименование</label>
+          <input id="name" placeholder="Например: 4x1.5 или PG11" />
+        </div>
+        <div>
+          <label for="unit">Ед. изм.</label>
+          <select id="unit">
+            <option value="шт">шт</option>
+            <option value="м">м</option>
+            <option value="уп">уп</option>
+            <option value="компл">компл</option>
+          </select>
+        </div>
+        <div>
+          <label for="qty">Остаток</label>
+          <input id="qty" type="number" min="0" step="1" placeholder="0" />
+        </div>
+        <div>
+          <label for="minQty">Мин. остаток</label>
+          <input id="minQty" type="number" min="0" step="1" placeholder="0" />
+        </div>
+        <div>
+          <label for="location">Где лежит</label>
+          <input id="location" placeholder="Например: Полка 2 / Ящик 4" />
+        </div>
+        <div style="grid-column:1/-1;">
+          <label for="note">Примечание</label>
+          <textarea id="note" rows="2" placeholder="Цвет, размер, комментарий"></textarea>
+        </div>
+      </div>
+      <div class="footer-actions" style="margin-top:12px;grid-template-columns:repeat(4,minmax(0,1fr));">
+        <button id="addBtn">Добавить позицию</button>
+        <button class="secondary" id="seedBtn">Добавить стартовые позиции</button>
+        <button class="secondary" id="exportBtn">Экспорт JSON</button>
+        <label class="secondary" style="display:flex;align-items:center;justify-content:center;cursor:pointer;">Импорт JSON
+          <input id="importFile" type="file" accept=".json" style="display:none;" />
+        </label>
       </div>
     </section>
 
-    <section class="toolbar">
-      <div class="panel">
-        <h2>Добавить позицию</h2>
-        <div class="form-grid">
-          <div>
-            <label>Категория</label>
-            <select id="category"></select>
-          </div>
-          <div>
-            <label>Наименование</label>
-            <input id="name" placeholder="Например: 0.75x3" />
-          </div>
-          <div>
-            <label>Ед. изм.</label>
-            <select id="unit">
-              <option value="м">м</option>
-              <option value="шт">шт</option>
-              <option value="уп">уп</option>
-            </select>
-          </div>
-          <div>
-            <label>Текущий остаток</label>
-            <input id="qty" type="number" min="0" step="0.01" placeholder="0" />
-          </div>
-          <div>
-            <label>Минимальный остаток</label>
-            <input id="minQty" type="number" min="0" step="0.01" placeholder="0" />
-          </div>
-          <div>
-            <label>Место хранения</label>
-            <input id="location" placeholder="Стеллаж, ящик, полка" />
-          </div>
-          <div class="full">
-            <label>Примечание</label>
-            <textarea id="note" placeholder="Цвет, тип, размер, серия и т.д."></textarea>
-          </div>
-          <div class="full"><button id="addBtn">Сохранить позицию</button></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>Быстрые действия</h2>
-        <div class="pill-row">
-          <button class="secondary" id="seedBtn">Заполнить стартовыми позициями</button>
-          <button class="secondary" id="exportBtn">Экспорт JSON</button>
-          <button class="secondary" id="printBuyBtn">Печать списка закупки</button>
-          <button class="ghost" id="clearBtn">Очистить всё</button>
-        </div>
-        <div style="margin-top:12px">
-          <label>Импорт из JSON</label>
-          <input type="file" id="importFile" accept="application/json" />
-        </div>
-        <div class="pill-row" style="margin-top:12px">
-          <div class="pill">Зелёный — НОРМА</div>
-          <div class="pill">Жёлтый — МАЛО</div>
-          <div class="pill">Красный — КУПИТЬ</div>
-          <div class="pill">Тёмный — НЕТ</div>
-        </div>
-        <p class="muted" style="margin:12px 0 0">На iPhone открой сайт в Safari → Поделиться → Добавить на экран Домой → включи «Открывать как веб‑приложение».</p>
-      </div>
-    </section>
 
     <section class="grid">
       <div class="panel">
@@ -331,10 +338,20 @@
       </div>
     </section>
   </div>
+  </div>
 
   <script>
-    const STORAGE_KEY = 'warehouse-app-v1';
-    const DEFAULT_CATEGORIES = ['Кабеля', 'Гофра', 'Болты', 'Фитинги/ПГА', 'Наконечники НШВ', 'Клеммы'];
+
+    function lockViewportHeight() {
+      const h = window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', h + 'px');
+    }
+    window.addEventListener('resize', lockViewportHeight);
+    window.addEventListener('orientationchange', lockViewportHeight);
+    lockViewportHeight();
+
+    const STORAGE_KEY = 'warehouse-app-v4';
+    const DEFAULT_CATEGORIES = [];
 
     const defaultSeedItems = [
       ['Кабеля', '0.75x3', 'м', 0, 30, '', ''],
@@ -394,6 +411,7 @@
 
     const els = {
       category: document.getElementById('category'),
+      categoryList: document.getElementById('categoryList'),
       name: document.getElementById('name'),
       unit: document.getElementById('unit'),
       qty: document.getElementById('qty'),
@@ -428,7 +446,7 @@
       if (raw) {
         try { return JSON.parse(raw); } catch (_) {}
       }
-      return { items: [], shopping: [], categories: [...DEFAULT_CATEGORIES] };
+      return { items: [], shopping: [], categories: [] };
     }
 
     function saveState() {
@@ -448,16 +466,50 @@
       return { key: 'ok', label: 'НОРМА', cls: 'ok', rank: 3 };
     }
 
+
+    function normalizeCategory(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function getCategoryList() {
+      const saved = Array.isArray(app.state.categories) ? app.state.categories : [];
+      const fromItems = (app.state.items || []).map(i => normalizeCategory(i.category)).filter(Boolean);
+      return [...new Set([...saved, ...fromItems])].sort((a, b) => a.localeCompare(b, 'ru'));
+    }
+
     function renderCategories() {
-      els.category.innerHTML = app.state.categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-      els.tabs.innerHTML = app.state.categories.map(c => `
+      const categories = getCategoryList();
+      const currentValue = els.category ? els.category.value : '';
+      if (els.categoryList) {
+        els.categoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+      }
+      if (els.category && !currentValue && categories.length) {
+        els.category.value = categories[0];
+      } else if (els.category && currentValue) {
+        els.category.value = currentValue;
+      }
+
+      if (!categories.length) {
+        els.tabs.innerHTML = `<div class="empty" style="padding:12px;">Категории появятся после добавления первой позиции.</div>`;
+        app.activeCategory = 'all';
+        return;
+      }
+
+      if (app.activeCategory !== 'all' && !categories.includes(app.activeCategory)) {
+        app.activeCategory = 'all';
+      }
+
+      els.tabs.innerHTML = categories.map(c => `
         <button class="tab ${app.activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>
       `).join('');
+
       [...els.tabs.querySelectorAll('.tab')].forEach(btn => {
         btn.addEventListener('click', () => {
           app.activeCategory = btn.dataset.cat;
           render();
         });
+      });
+    });
       });
     }
 
@@ -539,7 +591,7 @@
       const needBuy = all.filter(i => ['buy', 'none'].includes(getStatus(i).key)).length;
       els.statItems.textContent = all.length;
       els.statBuy.textContent = needBuy;
-      els.statCats.textContent = app.state.categories.length;
+      els.statCats.textContent = getCategoryList().length;
       els.statShopping.textContent = app.state.shopping.length;
     }
 
@@ -553,10 +605,12 @@
 
     function addItem() {
       const name = els.name.value.trim();
+      const category = normalizeCategory(els.category ? els.category.value : '');
+      if (!category) return alert('Напиши категорию.');
       if (!name) return alert('Напиши название позиции.');
       const item = {
         id: uid(),
-        category: els.category.value,
+        category,
         name,
         unit: els.unit.value,
         qty: Number(els.qty.value || 0),
@@ -564,6 +618,20 @@
         location: els.location.value.trim(),
         note: els.note.value.trim()
       };
+
+      if (!app.state.categories.includes(category)) {
+        app.state.categories.push(category);
+      }
+
+      app.state.items.push(item);
+      app.activeCategory = category;
+      els.name.value = '';
+      els.qty.value = '';
+      els.minQty.value = '';
+      els.location.value = '';
+      els.note.value = '';
+      render();
+    };
       app.state.items.push(item);
       els.name.value = '';
       els.qty.value = '';
@@ -633,6 +701,7 @@
         const key = `${category}|${name}|${note}`;
         if (!existingKeys.has(key)) {
           app.state.items.push({ id: uid(), category, name, unit, qty, minQty, location, note });
+          if (!app.state.categories.includes(category)) app.state.categories.push(category);
         }
       });
       render();
@@ -640,7 +709,7 @@
 
     function clearAll() {
       if (!confirm('Это удалит все позиции и список закупки. Продолжить?')) return;
-      app.state = { items: [], shopping: [], categories: [...DEFAULT_CATEGORIES] };
+      app.state = { items: [], shopping: [], categories: [] };
       app.activeCategory = 'all';
       render();
     }
@@ -659,7 +728,8 @@
       reader.onload = () => {
         try {
           const data = JSON.parse(reader.result);
-          if (!data.items || !data.shopping || !data.categories) throw new Error();
+          if (!data.items || !data.shopping) throw new Error();
+          if (!Array.isArray(data.categories)) data.categories = [];
           app.state = data;
           render();
         } catch {
@@ -707,18 +777,20 @@
       return Number.isInteger(n) ? String(n) : n.toFixed(2);
     }
 
-    els.addBtn.addEventListener('click', addItem);
+    if (els.addBtn) els.addBtn.addEventListener('click', addItem);
+    if (els.name) els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+    if (els.category) els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
     els.search.addEventListener('input', renderItems);
     els.statusFilter.addEventListener('change', renderItems);
     els.sortBy.addEventListener('change', renderItems);
-    els.showAllBtn.addEventListener('click', () => { app.activeCategory = 'all'; render(); });
-    els.shoppingFromLowBtn.addEventListener('click', addAllProblemToShopping);
+    if (els.showAllBtn) els.showAllBtn.addEventListener('click', () => { app.activeCategory = 'all'; render(); });
+    if (els.shoppingFromLowBtn) els.shoppingFromLowBtn.addEventListener('click', addAllProblemToShopping);
     els.seedBtn.addEventListener('click', fillSeed);
     els.exportBtn.addEventListener('click', exportJson);
     els.clearBtn.addEventListener('click', clearAll);
     els.importFile.addEventListener('change', e => e.target.files[0] && importJson(e.target.files[0]));
     els.copyBuyBtn.addEventListener('click', copyShopping);
-    els.markBoughtBtn.addEventListener('click', markBought);
+    if (els.markBoughtBtn) els.markBoughtBtn.addEventListener('click', markBought);
     els.clearBuyBtn.addEventListener('click', () => { app.state.shopping = []; render(); });
     els.printBuyBtn.addEventListener('click', printShopping);
 
