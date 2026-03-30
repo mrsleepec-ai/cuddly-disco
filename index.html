@@ -98,11 +98,40 @@
     }
     .muted{color:var(--muted);}
     .danger{background:#991b1b;}
+    .shopping-group{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#0f172a;
+      margin-bottom:10px;
+      overflow:hidden;
+    }
+    .shopping-group-head{
+      padding:12px 12px 8px;
+      border-bottom:1px solid rgba(148,163,184,.14);
+      font-weight:800;
+      font-size:15px;
+    }
     .shopping-item{
-      display:flex; justify-content:space-between; gap:8px; align-items:center;
-      padding:10px 0; border-bottom:1px solid rgba(148,163,184,.18);
+      display:grid;
+      grid-template-columns:1.4fr 110px 110px auto;
+      gap:8px;
+      align-items:start;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.12);
     }
     .shopping-item:last-child{border-bottom:0;}
+    .shopping-meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35;}
+    .shop-field input,.shop-field select{
+      padding:10px;
+      font-size:14px;
+      min-height:42px;
+    }
+    .shop-name{font-weight:700;}
+    @media (max-width:720px){
+      .shopping-item{
+        grid-template-columns:1fr;
+      }
+    }
     @media (max-width:720px){
       .grid,.stats{grid-template-columns:1fr;}
       .actions{grid-template-columns:50px 1fr 50px 1fr;}
@@ -334,7 +363,15 @@
           if (!Array.isArray(parsed.items)) throw new Error();
           app.state = {
             items: parsed.items,
-            shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
+            shopping: Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({
+              id: x.id || uid(),
+              itemId: x.itemId || '',
+              category: x.category || '',
+              name: x.name || x.text || '',
+              unit: x.unit || 'шт',
+              buyQty: x.buyQty ?? '',
+              note: x.note || ''
+            })) : [],
           };
           saveState();
           render();
@@ -391,16 +428,29 @@
 
       need.forEach(item => {
         if (!app.state.shopping.some(x => x.itemId === item.id)) {
+          const deficit = Math.max(0, Number(item.minQty || 0) - Number(item.qty || 0));
           app.state.shopping.push({
             id: uid(),
             itemId: item.id,
-            text: `${item.category} — ${item.name}`,
+            category: item.category,
+            name: item.name,
+            unit: item.unit || 'шт',
+            buyQty: deficit > 0 ? deficit : '',
+            note: item.note || ''
           });
         }
       });
 
       saveState();
       render();
+    }
+
+    function updateShoppingItem(id, patch) {
+      const row = app.state.shopping.find(x => x.id === id);
+      if (!row) return;
+      Object.assign(row, patch);
+      saveState();
+      renderShopping();
     }
 
     function clearShopping() {
@@ -498,12 +548,39 @@
         return;
       }
 
-      els.shopping.innerHTML = app.state.shopping.map(row => `
-        <div class="shopping-item">
-          <div>${escapeHtml(row.text)}</div>
-          <button class="secondary" data-rm-shop="${row.id}">Убрать</button>
+      const groups = {};
+      app.state.shopping.forEach(row => {
+        const key = normalize(row.category) || 'Без категории';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+
+      const htmlGroups = Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0], 'ru')).map(([category, rows]) => `
+        <div class="shopping-group">
+          <div class="shopping-group-head">${escapeHtml(category)}</div>
+          ${rows.map(row => `
+            <div class="shopping-item">
+              <div>
+                <div class="shop-name">${escapeHtml(row.name || '—')}</div>
+                <div class="shopping-meta">Примечание: ${escapeHtml(row.note || '—')}</div>
+              </div>
+              <div class="shop-field">
+                <input type="number" min="0" step="1" value="${row.buyQty ?? ''}" data-shop-qty="${row.id}" placeholder="Кол-во" />
+              </div>
+              <div class="shop-field">
+                <select data-shop-unit="${row.id}">
+                  ${['шт','м','уп','компл'].map(u => `<option value="${u}" ${row.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
+                </select>
+              </div>
+              <div class="row" style="justify-content:flex-end;">
+                <button class="secondary" data-rm-shop="${row.id}">Убрать</button>
+              </div>
+            </div>
+          `).join('')}
         </div>
       `).join('');
+
+      els.shopping.innerHTML = htmlGroups;
 
       els.shopping.querySelectorAll('[data-rm-shop]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -511,6 +588,16 @@
           saveState();
           renderShopping();
         });
+      });
+
+      els.shopping.querySelectorAll('[data-shop-qty]').forEach(input => {
+        const handler = () => updateShoppingItem(input.dataset.shopQty, { buyQty: input.value === '' ? '' : Math.max(0, Number(input.value || 0)) });
+        input.addEventListener('change', handler);
+        input.addEventListener('blur', handler);
+      });
+
+      els.shopping.querySelectorAll('[data-shop-unit]').forEach(select => {
+        select.addEventListener('change', () => updateShoppingItem(select.dataset.shopUnit, { unit: select.value }));
       });
     }
 
