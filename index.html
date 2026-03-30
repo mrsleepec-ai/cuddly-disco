@@ -218,6 +218,7 @@
       <div class="row" style="margin-bottom:12px;">
         <button id="fillShoppingBtn">Добавить всё проблемное</button>
         <button class="secondary" id="clearShoppingBtn">Очистить список</button>
+        <button class="ghost" id="pdfShoppingBtn">Скачать PDF</button>
       </div>
       <div id="shopping"></div>
     </section>
@@ -249,6 +250,7 @@
       shopping: document.getElementById('shopping'),
       fillShoppingBtn: document.getElementById('fillShoppingBtn'),
       clearShoppingBtn: document.getElementById('clearShoppingBtn'),
+      pdfShoppingBtn: document.getElementById('pdfShoppingBtn'),
     };
 
     const app = {
@@ -601,6 +603,85 @@
       });
     }
 
+    function exportShoppingPdf() {
+      if (!app.state.shopping.length) {
+        alert('Список закупки пуст.');
+        return;
+      }
+
+      const groups = {};
+      app.state.shopping.forEach(row => {
+        const key = normalize(row.category) || 'Без категории';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+
+      const printable = Object.entries(groups)
+        .sort((a, b) => a[0].localeCompare(b[0], 'ru'))
+        .map(([category, rows]) => `
+          <section style="margin-bottom:22px;">
+            <h2 style="margin:0 0 10px;font-size:18px;border-bottom:1px solid #ccc;padding-bottom:6px;">${escapeHtml(category)}</h2>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;border:1px solid #bbb;padding:8px;">Наименование</th>
+                  <th style="text-align:left;border:1px solid #bbb;padding:8px;width:90px;">Кол-во</th>
+                  <th style="text-align:left;border:1px solid #bbb;padding:8px;width:80px;">Ед.</th>
+                  <th style="text-align:left;border:1px solid #bbb;padding:8px;">Примечание</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(row => `
+                  <tr>
+                    <td style="border:1px solid #bbb;padding:8px;">${escapeHtml(row.name || '—')}</td>
+                    <td style="border:1px solid #bbb;padding:8px;">${row.buyQty === '' ? '—' : escapeHtml(String(row.buyQty))}</td>
+                    <td style="border:1px solid #bbb;padding:8px;">${escapeHtml(row.unit || 'шт')}</td>
+                    <td style="border:1px solid #bbb;padding:8px;">${escapeHtml(row.note || '—')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </section>
+        `).join('');
+
+      const now = new Date();
+      const dateText = now.toLocaleDateString('ru-RU');
+
+      const win = window.open('', '_blank');
+      if (!win) {
+        alert('Браузер заблокировал окно печати. Разреши всплывающее окно и попробуй ещё раз.');
+        return;
+      }
+
+      win.document.write(`<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Список закупки</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  body { font-family: Arial, sans-serif; color: #111; margin: 0; }
+  h1 { margin: 0 0 6px; font-size: 24px; }
+  .muted { color: #555; margin-bottom: 18px; font-size: 12px; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+</style>
+</head>
+<body>
+  <h1>Список закупки</h1>
+  <div class="muted">Дата: ${dateText}</div>
+  ${printable}
+</body>
+</html>`);
+      win.document.close();
+      win.focus();
+      setTimeout(() => {
+        win.print();
+      }, 250);
+    }
+
     function render() {
       renderTabs();
       renderStats();
@@ -615,6 +696,7 @@
     els.search.addEventListener('input', renderItems);
     els.fillShoppingBtn.addEventListener('click', addProblemToShopping);
     els.clearShoppingBtn.addEventListener('click', clearShopping);
+    els.pdfShoppingBtn.addEventListener('click', exportShoppingPdf);
     els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
     els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 
