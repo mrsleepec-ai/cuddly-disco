@@ -79,8 +79,18 @@
     .meta{font-size:13px; color:var(--muted); display:grid; gap:4px; margin-bottom:10px;}
     .actions{display:grid; grid-template-columns:44px 1fr 44px 1fr; gap:8px; align-items:center;}
     .qty{
+      width:100%;
       text-align:center; font-size:16px; font-weight:800; padding:10px; border-radius:12px;
-      border:1px solid var(--line); background:#111827;
+      border:1px solid var(--line); background:#111827; color:var(--text);
+    }
+    .qty-input{
+      appearance:textfield;
+      -moz-appearance:textfield;
+    }
+    .qty-input::-webkit-outer-spin-button,
+    .qty-input::-webkit-inner-spin-button{
+      -webkit-appearance:none;
+      margin:0;
     }
     .empty{
       padding:16px; text-align:center; color:var(--muted); border:1px dashed #475569; border-radius:16px;
@@ -346,6 +356,15 @@
       render();
     }
 
+    function setQty(id, value) {
+      const item = app.state.items.find(x => x.id === id);
+      if (!item) return;
+      const num = Number(value);
+      item.qty = Number.isFinite(num) ? Math.max(0, num) : 0;
+      saveState();
+      render();
+    }
+
     function removeItem(id) {
       if (!confirm('Удалить позицию?')) return;
       app.state.items = app.state.items.filter(x => x.id !== id);
@@ -456,7 +475,7 @@
             </div>
             <div class="actions">
               <button class="secondary" data-dec="${item.id}">−</button>
-              <div class="qty">${Number(item.qty || 0)}</div>
+              <input class="qty qty-input" type="number" min="0" step="1" value="${Number(item.qty || 0)}" data-qty-input="${item.id}" />
               <button data-inc="${item.id}">+</button>
               <button class="danger" data-del="${item.id}">Удалить</button>
             </div>
@@ -467,6 +486,10 @@
       els.items.querySelectorAll('[data-dec]').forEach(btn => btn.addEventListener('click', () => changeQty(btn.dataset.dec, -1)));
       els.items.querySelectorAll('[data-inc]').forEach(btn => btn.addEventListener('click', () => changeQty(btn.dataset.inc, 1)));
       els.items.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', () => removeItem(btn.dataset.del)));
+      els.items.querySelectorAll('[data-qty-input]').forEach(input => {
+        input.addEventListener('change', () => setQty(input.dataset.qtyInput, input.value));
+        input.addEventListener('blur', () => setQty(input.dataset.qtyInput, input.value));
+      });
     }
 
     function renderShopping() {
