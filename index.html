@@ -3,253 +3,121 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Склад" />
-  <title>Складской учёт</title>
-  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Склад</title>
   <style>
-    :root {
-      --bg: #0b1020;
-      --panel: #121a2f;
-      --panel-2: #17213c;
-      --text: #edf2f7;
-      --muted: #99a3b3;
-      --line: #27314f;
-      --ok: #14532d;
-      --warn: #854d0e;
-      --buy: #991b1b;
-      --none: #450a0a;
-      --accent: #2563eb;
-      --chip: #1f2a44;
-      --shadow: 0 12px 32px rgba(0,0,0,.28);
-      --radius: 18px;
+    :root{
+      --bg:#0f172a; --bg2:#111827; --card:#1e293b; --line:#334155;
+      --text:#e5e7eb; --muted:#94a3b8; --accent:#3b82f6;
+      --ok:#14532d; --warn:#854d0e; --buy:#7f1d1d; --none:#450a0a;
     }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      max-width: 100%;
-      overflow: hidden;
-      background: #09111f;
-      overscroll-behavior: none;
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{
+      margin:0; padding:0; width:100%; height:100%;
+      overflow:hidden; background:var(--bg); color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: var(--text);
-      height: 100dvh;
-      position: fixed;
-      inset: 0;
-      touch-action: manipulation;
-    }
-    .app-shell {
-      height: 100dvh;
-      overflow-x: hidden;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      background: linear-gradient(180deg, #09111f 0%, #0d1528 100%);
-    }
-    .wrap {
-      max-width: 1180px;
-      margin: 0 auto;
+    body{position:fixed; inset:0;}
+    .app{
+      height:100%; overflow-y:auto; overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
       padding:
         calc(env(safe-area-inset-top, 0px) + 12px)
-        max(14px, env(safe-area-inset-right, 0px))
-        calc(env(safe-area-inset-bottom, 0px) + 90px)
-        max(14px, env(safe-area-inset-left, 0px));
+        max(12px, env(safe-area-inset-right, 0px))
+        calc(env(safe-area-inset-bottom, 0px) + 18px)
+        max(12px, env(safe-area-inset-left, 0px));
+      background:linear-gradient(180deg,#0b1220 0%, #111827 100%);
     }
-    .hero {
-      background: linear-gradient(135deg, #1d4ed8, #111827 70%);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 24px;
-      padding: 18px;
-      box-shadow: var(--shadow);
-      margin-bottom: 14px;
+    .header{
+      position:sticky; top:0; z-index:20; margin:-12px -12px 12px; padding:
+        calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+      background:rgba(15,23,42,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
     }
-    .hero h1 { margin: 0 0 6px; font-size: 28px; }
-    .hero p { margin: 0; color: #dbe4f3; }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0,1fr));
-      gap: 10px;
-      margin-top: 14px;
+    .title{font-size:24px; font-weight:800; margin:0 0 4px;}
+    .sub{font-size:13px; color:var(--muted);}
+    .panel{
+      background:rgba(30,41,59,.9); border:1px solid var(--line);
+      border-radius:18px; padding:14px; margin-bottom:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.25);
     }
-    .card {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      padding: 14px;
-      backdrop-filter: blur(8px);
+    .panel h2{margin:0 0 12px; font-size:17px;}
+    .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+    .full{grid-column:1/-1;}
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+    input, select, textarea{
+      width:100%; border-radius:12px; border:1px solid #475569;
+      background:#0f172a; color:var(--text); padding:12px 12px; font-size:16px;
+      outline:none;
     }
-    .card .label { color: #d5deea; font-size: 13px; }
-    .card .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
-    .toolbar, .grid {
-      display: grid;
-      gap: 14px;
+    textarea{resize:vertical; min-height:78px;}
+    .row{display:flex; gap:8px; flex-wrap:wrap;}
+    button{
+      border:0; border-radius:12px; padding:12px 14px; font-size:15px; font-weight:700;
+      background:var(--accent); color:white; cursor:pointer;
     }
-    .toolbar {
-      grid-template-columns: 1.1fr .9fr;
-      margin-bottom: 14px;
+    button.secondary{background:#334155;}
+    button.ghost{background:transparent; border:1px solid #475569; color:var(--text);}
+    .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+    .stat{background:#0f172a; border:1px solid var(--line); border-radius:14px; padding:10px;}
+    .stat .n{font-size:22px; font-weight:800;}
+    .stat .t{font-size:12px; color:var(--muted);}
+    .tabs{display:flex; gap:8px; overflow:auto; padding-bottom:2px;}
+    .tab{white-space:nowrap; background:#0f172a; border:1px solid #475569;}
+    .tab.active{background:var(--accent); border-color:var(--accent);}
+    .item{
+      border:1px solid var(--line); border-radius:16px; background:#0f172a;
+      padding:12px; margin-bottom:10px;
     }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 14px;
-      box-shadow: var(--shadow);
+    .item-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;}
+    .name{font-size:17px; font-weight:800; line-height:1.2;}
+    .cat{font-size:12px; color:var(--muted); margin-top:4px;}
+    .badge{
+      padding:6px 8px; border-radius:999px; font-size:11px; font-weight:800; flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.08);
     }
-    h2, h3 { margin: 0 0 12px; }
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap: 10px;
+    .ok{background:var(--ok);} .warn{background:var(--warn);} .buy{background:var(--buy);} .none{background:var(--none);}
+    .meta{font-size:13px; color:var(--muted); display:grid; gap:4px; margin-bottom:10px;}
+    .actions{display:grid; grid-template-columns:44px 1fr 44px 1fr; gap:8px; align-items:center;}
+    .qty{
+      text-align:center; font-size:16px; font-weight:800; padding:10px; border-radius:12px;
+      border:1px solid var(--line); background:#111827;
     }
-    .form-grid .full { grid-column: 1 / -1; }
-    label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
+    .empty{
+      padding:16px; text-align:center; color:var(--muted); border:1px dashed #475569; border-radius:16px;
+      background:#0f172a;
     }
-    input, select, textarea, button {
-      width: 100%;
-      border-radius: 12px;
-      border: 1px solid #33405f;
-      background: #0f172a;
-      color: var(--text);
-      padding: 12px 12px;
-      font-size: 14px;
+    .muted{color:var(--muted);}
+    .danger{background:#991b1b;}
+    .shopping-item{
+      display:flex; justify-content:space-between; gap:8px; align-items:center;
+      padding:10px 0; border-bottom:1px solid rgba(148,163,184,.18);
     }
-    textarea { min-height: 84px; resize: vertical; }
-    button {
-      background: var(--accent);
-      border: none;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform .08s ease, opacity .2s ease;
-    }
-    button:active { transform: scale(.99); }
-    button.secondary { background: #1e293b; border: 1px solid #33405f; }
-    button.ghost { background: transparent; border: 1px dashed #475569; }
-    .grid { grid-template-columns: 1.3fr .9fr; }
-    .search-row {
-      display: grid;
-      grid-template-columns: 1.1fr .7fr .6fr .6fr .6fr;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-    .tab {
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: var(--chip);
-      color: var(--text);
-      border: 1px solid #33405f;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .tab.active { background: var(--accent); border-color: transparent; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    th, td {
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      vertical-align: top;
-    }
-    th { color: #cbd5e1; font-weight: 600; font-size: 12px; text-transform: uppercase; }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .ok { background: rgba(34,197,94,.16); color: #86efac; }
-    .low { background: rgba(250,204,21,.16); color: #fde68a; }
-    .buy { background: rgba(248,113,113,.16); color: #fca5a5; }
-    .none { background: rgba(127,29,29,.35); color: #fecaca; }
-    .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
-    .small-btn {
-      width: auto;
-      padding: 8px 10px;
-      font-size: 12px;
-      border-radius: 10px;
-    }
-    .muted { color: var(--muted); }
-    .list-item {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      background: var(--panel-2);
-      margin-bottom: 10px;
-    }
-    .pill-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .pill {
-      border: 1px solid #33405f;
-      background: #0f172a;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      color: #d4dce8;
-    }
-    .empty {
-      text-align: center;
-      color: var(--muted);
-      padding: 28px 12px;
-      border: 1px dashed #33405f;
-      border-radius: 16px;
-    }
-    .footer-actions {
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 12px;
-    }
-    @media (max-width: 980px) {
-      .stats, .toolbar, .grid, .search-row { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
-      .footer-actions { grid-template-columns: 1fr; }
-      .card .value { font-size: 22px; }
-      .hero h1 { font-size: 24px; }
-      table { display:block; width:100%; overflow-x:auto; }
-    }
-    @media (max-width: 640px) {
-      .hero { border-radius: 20px; padding: 16px; }
-      .panel { border-radius: 16px; padding: 12px; }
-      .search-row { gap: 8px; }
-      th, td { padding: 9px 6px; }
+    .shopping-item:last-child{border-bottom:0;}
+    @media (max-width:720px){
+      .grid,.stats{grid-template-columns:1fr;}
+      .actions{grid-template-columns:50px 1fr 50px 1fr;}
+      button{min-height:46px;}
     }
   </style>
 </head>
 <body>
-  <div class="app-shell">
-  <div class="wrap">
-    
+  <div class="app">
+    <div class="header">
+      <div class="title">Склад</div>
+      <div class="sub">Добавляй свои категории и позиции. Никаких фиксированных категорий.</div>
+    </div>
 
-    
-    <section class="panel" style="margin-bottom:14px;">
+    <section class="panel">
       <h2>Добавить позицию</h2>
-      <div class="form-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+      <div class="grid">
         <div>
           <label for="category">Категория</label>
-          <input id="category" list="categoryList" placeholder="Например: Кабеля, Клеммы, Инструмент" />
+          <input id="category" list="categoryList" placeholder="Например: Кабеля" />
           <datalist id="categoryList"></datalist>
         </div>
         <div>
           <label for="name">Наименование</label>
-          <input id="name" placeholder="Например: 4x1.5 или PG11" />
+          <input id="name" placeholder="Например: 4x1.5" />
         </div>
         <div>
           <label for="unit">Ед. изм.</label>
@@ -270,95 +138,54 @@
         </div>
         <div>
           <label for="location">Где лежит</label>
-          <input id="location" placeholder="Например: Полка 2 / Ящик 4" />
+          <input id="location" placeholder="Например: Ящик 2" />
         </div>
-        <div style="grid-column:1/-1;">
+        <div class="full">
           <label for="note">Примечание</label>
-          <textarea id="note" rows="2" placeholder="Цвет, размер, комментарий"></textarea>
+          <textarea id="note" placeholder="Цвет, размер, комментарий"></textarea>
         </div>
       </div>
-      <div class="footer-actions" style="margin-top:12px;grid-template-columns:repeat(4,minmax(0,1fr));">
+      <div class="row" style="margin-top:12px;">
         <button id="addBtn">Добавить позицию</button>
-        <button class="secondary" id="seedBtn" style="display:none;">Добавить стартовые позиции</button>
-        <button class="secondary" id="exportBtn">Экспорт JSON</button>
-        <label class="secondary" style="display:flex;align-items:center;justify-content:center;cursor:pointer;">Импорт JSON
+        <button class="secondary" id="addDemoBtn">Заполнить примером</button>
+        <button class="ghost" id="exportBtn">Экспорт</button>
+        <label class="ghost" style="display:flex;align-items:center;justify-content:center;padding:12px 14px;border-radius:12px;cursor:pointer;">
+          Импорт
           <input id="importFile" type="file" accept=".json" style="display:none;" />
         </label>
       </div>
     </section>
 
-
-    <section class="grid">
-      <div class="panel">
-        <h2>Склад</h2>
-        <div class="tabs" id="tabs"></div>
-        <div class="search-row">
-          <input id="search" placeholder="Поиск по названию, примечанию, месту" />
-          <select id="statusFilter">
-            <option value="all">Все статусы</option>
-            <option value="ok">Норма</option>
-            <option value="low">Мало</option>
-            <option value="buy">Купить</option>
-            <option value="none">Нет</option>
-          </select>
-          <select id="sortBy">
-            <option value="name">Сортировка: название</option>
-            <option value="status">Сортировка: статус</option>
-            <option value="qty">Сортировка: остаток</option>
-            <option value="category">Сортировка: категория</option>
-          </select>
-          <button class="secondary" id="showAllBtn">Все категории</button>
-          <button class="secondary" id="shoppingFromLowBtn">В закупку всё проблемное</button>
-        </div>
-        <div style="overflow:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>Позиция</th>
-                <th>Остаток</th>
-                <th>Мин.</th>
-                <th>Где лежит</th>
-                <th>Статус</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody id="itemsBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>Список закупки</h2>
-        <div id="shoppingList"></div>
-        <div class="footer-actions">
-          <button class="secondary" id="copyBuyBtn">Скопировать список</button>
-          <button class="secondary" id="markBoughtBtn">Пометить купленным</button>
-          <button class="ghost" id="clearBuyBtn">Очистить список</button>
-        </div>
+    <section class="panel">
+      <div class="stats">
+        <div class="stat"><div class="n" id="statItems">0</div><div class="t">Позиций</div></div>
+        <div class="stat"><div class="n" id="statCategories">0</div><div class="t">Категорий</div></div>
+        <div class="stat"><div class="n" id="statNeedBuy">0</div><div class="t">Купить</div></div>
+        <div class="stat"><div class="n" id="statZero">0</div><div class="t">Ноль</div></div>
       </div>
     </section>
-  </div>
+
+    <section class="panel">
+      <h2>Склад</h2>
+      <div class="tabs" id="tabs"></div>
+      <div class="row" style="margin:12px 0;">
+        <input id="search" placeholder="Поиск по названию / месту / примечанию" />
+      </div>
+      <div id="items"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Список закупки</h2>
+      <div class="row" style="margin-bottom:12px;">
+        <button id="fillShoppingBtn">Добавить всё проблемное</button>
+        <button class="secondary" id="clearShoppingBtn">Очистить список</button>
+      </div>
+      <div id="shopping"></div>
+    </section>
   </div>
 
   <script>
-
-    function lockViewportHeight() {
-      const h = window.innerHeight;
-      document.documentElement.style.setProperty('--app-height', h + 'px');
-    }
-    window.addEventListener('resize', lockViewportHeight);
-    window.addEventListener('orientationchange', lockViewportHeight);
-    lockViewportHeight();
-
-    const STORAGE_KEY = 'warehouse-app-v5';
-    const DEFAULT_CATEGORIES = [];
-
-    const defaultSeedItems = [];
-
-    const app = {
-      state: loadState(),
-      activeCategory: 'all'
-    };
+    const STORAGE_KEY = 'warehouse-clean-v1';
 
     const els = {
       category: document.getElementById('category'),
@@ -370,81 +197,206 @@
       location: document.getElementById('location'),
       note: document.getElementById('note'),
       addBtn: document.getElementById('addBtn'),
-      tabs: document.getElementById('tabs'),
-      itemsBody: document.getElementById('itemsBody'),
-      shoppingList: document.getElementById('shoppingList'),
-      search: document.getElementById('search'),
-      statusFilter: document.getElementById('statusFilter'),
-      sortBy: document.getElementById('sortBy'),
-      statItems: document.getElementById('statItems'),
-      statBuy: document.getElementById('statBuy'),
-      statCats: document.getElementById('statCats'),
-      statShopping: document.getElementById('statShopping'),
-      showAllBtn: document.getElementById('showAllBtn'),
-      shoppingFromLowBtn: document.getElementById('shoppingFromLowBtn'),
-      seedBtn: document.getElementById('seedBtn'),
+      addDemoBtn: document.getElementById('addDemoBtn'),
       exportBtn: document.getElementById('exportBtn'),
       importFile: document.getElementById('importFile'),
-      clearBtn: document.getElementById('clearBtn'),
-      copyBuyBtn: document.getElementById('copyBuyBtn'),
-      markBoughtBtn: document.getElementById('markBoughtBtn'),
-      clearBuyBtn: document.getElementById('clearBuyBtn'),
-      printBuyBtn: document.getElementById('printBuyBtn')
+      statItems: document.getElementById('statItems'),
+      statCategories: document.getElementById('statCategories'),
+      statNeedBuy: document.getElementById('statNeedBuy'),
+      statZero: document.getElementById('statZero'),
+      tabs: document.getElementById('tabs'),
+      search: document.getElementById('search'),
+      items: document.getElementById('items'),
+      shopping: document.getElementById('shopping'),
+      fillShoppingBtn: document.getElementById('fillShoppingBtn'),
+      clearShoppingBtn: document.getElementById('clearShoppingBtn'),
     };
 
+    const app = {
+      activeCategory: 'all',
+      state: loadState(),
+    };
+
+    function uid() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    function normalize(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
     function loadState() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        try { return JSON.parse(raw); } catch (_) {}
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { items: [], shopping: [] };
+        const parsed = JSON.parse(raw);
+        return {
+          items: Array.isArray(parsed.items) ? parsed.items : [],
+          shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
+        };
+      } catch (e) {
+        return { items: [], shopping: [] };
       }
-      return { items: [], shopping: [], categories: [] };
     }
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
     }
 
-    function uid() {
-      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    function getCategories() {
+      return [...new Set(app.state.items.map(x => normalize(x.category)).filter(Boolean))]
+        .sort((a,b) => a.localeCompare(b, 'ru'));
     }
 
-    function getStatus(item) {
+    function statusFor(item) {
       const qty = Number(item.qty || 0);
-      const min = Number(item.minQty || 0);
-      if (qty <= 0) return { key: 'none', label: 'НЕТ', cls: 'none', rank: 0 };
-      if (qty <= min) return { key: 'buy', label: 'КУПИТЬ', cls: 'buy', rank: 1 };
-      if (qty <= min * 1.5) return { key: 'low', label: 'МАЛО', cls: 'low', rank: 2 };
-      return { key: 'ok', label: 'НОРМА', cls: 'ok', rank: 3 };
+      const minQty = Number(item.minQty || 0);
+      if (qty <= 0) return { key:'none', text:'НЕТ' };
+      if (qty <= minQty) return { key:'buy', text:'КУПИТЬ' };
+      if (qty <= minQty * 1.5 && minQty > 0) return { key:'warn', text:'МАЛО' };
+      return { key:'ok', text:'НОРМА' };
     }
 
+    function addItem() {
+      const category = normalize(els.category.value);
+      const name = normalize(els.name.value);
+      if (!category) return alert('Впиши категорию.');
+      if (!name) return alert('Впиши название позиции.');
 
-    function normalizeCategory(value) {
-      return String(value || '').trim().replace(/\s+/g, ' ');
+      app.state.items.unshift({
+        id: uid(),
+        category,
+        name,
+        unit: els.unit.value,
+        qty: Number(els.qty.value || 0),
+        minQty: Number(els.minQty.value || 0),
+        location: normalize(els.location.value),
+        note: normalize(els.note.value),
+      });
+
+      app.activeCategory = category;
+      els.name.value = '';
+      els.qty.value = '';
+      els.minQty.value = '';
+      els.location.value = '';
+      els.note.value = '';
+      saveState();
+      render();
     }
 
-    function getCategoryList() {
-      const saved = Array.isArray(app.state.categories) ? app.state.categories : [];
-      const fromItems = (app.state.items || []).map(i => normalizeCategory(i.category)).filter(Boolean);
-      return [...new Set([...saved, ...fromItems])].sort((a, b) => a.localeCompare(b, 'ru'));
+    function addDemo() {
+      const demo = [
+        { category:'Кабеля', name:'0.75x3', unit:'м', qty:42, minQty:15, location:'Полка 1', note:'' },
+        { category:'Кабеля', name:'4x1.5', unit:'м', qty:7, minQty:15, location:'Полка 1', note:'чёрный' },
+        { category:'Клеммы', name:'синие 2.5', unit:'шт', qty:0, minQty:20, location:'Ящик 4', note:'' },
+        { category:'НШВ', name:'2.5', unit:'шт', qty:50, minQty:25, location:'Ящик 5', note:'' },
+      ];
+      demo.reverse().forEach(item => app.state.items.unshift({ id: uid(), ...item }));
+      saveState();
+      render();
     }
 
-    function renderCategories() {
-      const categories = getCategoryList();
-      const currentValue = els.category ? els.category.value : '';
+    function exportData() {
+      const blob = new Blob([JSON.stringify(app.state, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sklad-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
-      if (els.categoryList) {
-        els.categoryList.innerHTML = categories
-          .map(c => `<option value="${escapeHtml(c)}"></option>`)
-          .join('');
-      }
+    function importData(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!Array.isArray(parsed.items)) throw new Error();
+          app.state = {
+            items: parsed.items,
+            shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
+          };
+          saveState();
+          render();
+          alert('Импортировано.');
+        } catch (e) {
+          alert('Файл битый или не подходит.');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    }
 
-      if (els.category && currentValue) {
-        els.category.value = currentValue;
-      }
+    function changeQty(id, delta) {
+      const item = app.state.items.find(x => x.id === id);
+      if (!item) return;
+      item.qty = Math.max(0, Number(item.qty || 0) + delta);
+      saveState();
+      render();
+    }
+
+    function removeItem(id) {
+      if (!confirm('Удалить позицию?')) return;
+      app.state.items = app.state.items.filter(x => x.id !== id);
+      app.state.shopping = app.state.shopping.filter(x => x.itemId !== id);
+      saveState();
+      render();
+    }
+
+    function filteredItems() {
+      const q = normalize(els.search.value).toLowerCase();
+      return app.state.items.filter(item => {
+        const inCategory = app.activeCategory === 'all' ? true : item.category === app.activeCategory;
+        const hay = [item.name, item.category, item.location, item.note].join(' ').toLowerCase();
+        const inSearch = !q || hay.includes(q);
+        return inCategory && inSearch;
+      });
+    }
+
+    function addProblemToShopping() {
+      const need = app.state.items.filter(item => {
+        const s = statusFor(item);
+        return s.key === 'buy' || s.key === 'none';
+      });
+
+      need.forEach(item => {
+        if (!app.state.shopping.some(x => x.itemId === item.id)) {
+          app.state.shopping.push({
+            id: uid(),
+            itemId: item.id,
+            text: `${item.category} — ${item.name}`,
+          });
+        }
+      });
+
+      saveState();
+      render();
+    }
+
+    function clearShopping() {
+      app.state.shopping = [];
+      saveState();
+      render();
+    }
+
+    function renderTabs() {
+      const categories = getCategories();
+
+      els.categoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
 
       if (!categories.length) {
-        els.tabs.innerHTML = `<div class="empty" style="padding:12px;">Категории появятся после добавления первой позиции.</div>`;
-        app.activeCategory = 'all';
+        els.tabs.innerHTML = '<div class="empty">Категории появятся после добавления первой позиции.</div>';
         return;
       }
 
@@ -452,308 +404,109 @@
         app.activeCategory = 'all';
       }
 
-      els.tabs.innerHTML = categories.map(c => `
-        <button class="tab ${app.activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>
-      `).join('');
+      const buttons = [
+        `<button class="tab ${app.activeCategory === 'all' ? 'active' : ''}" data-cat="all">Все</button>`,
+        ...categories.map(c => `<button class="tab ${app.activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`)
+      ];
 
-      [...els.tabs.querySelectorAll('.tab')].forEach(btn => {
+      els.tabs.innerHTML = buttons.join('');
+      els.tabs.querySelectorAll('[data-cat]').forEach(btn => {
         btn.addEventListener('click', () => {
           app.activeCategory = btn.dataset.cat;
-          render();
+          renderItems();
+          renderTabs();
         });
       });
     }
 
-    function filteredItems() {
-      const q = els.search.value.trim().toLowerCase();
-      const sf = els.statusFilter.value;
-      const sort = els.sortBy.value;
-      let items = [...app.state.items];
-      if (app.activeCategory !== 'all') items = items.filter(i => i.category === app.activeCategory);
-      if (q) {
-        items = items.filter(i => [i.name, i.note, i.location, i.category].join(' ').toLowerCase().includes(q));
-      }
-      if (sf !== 'all') {
-        items = items.filter(i => getStatus(i).key === sf);
-      }
-      items.sort((a, b) => {
-        if (sort === 'status') return getStatus(a).rank - getStatus(b).rank;
-        if (sort === 'qty') return Number(a.qty) - Number(b.qty);
-        if (sort === 'category') return a.category.localeCompare(b.category, 'ru');
-        return a.name.localeCompare(b.name, 'ru');
-      });
-      return items;
+    function renderStats() {
+      const categories = getCategories();
+      const needBuy = app.state.items.filter(x => ['buy','none'].includes(statusFor(x).key)).length;
+      const zero = app.state.items.filter(x => Number(x.qty || 0) <= 0).length;
+
+      els.statItems.textContent = app.state.items.length;
+      els.statCategories.textContent = categories.length;
+      els.statNeedBuy.textContent = needBuy;
+      els.statZero.textContent = zero;
     }
 
     function renderItems() {
-      const items = filteredItems();
-      if (!items.length) {
-        els.itemsBody.innerHTML = `<tr><td colspan="6"><div class="empty">Пока ничего не найдено.</div></td></tr>`;
+      const list = filteredItems();
+      if (!list.length) {
+        els.items.innerHTML = '<div class="empty">Пока пусто.</div>';
         return;
       }
-      els.itemsBody.innerHTML = items.map(item => {
-        const status = getStatus(item);
+
+      els.items.innerHTML = list.map(item => {
+        const s = statusFor(item);
         return `
-          <tr>
-            <td>
-              <strong>${escapeHtml(item.name)}</strong><br />
-              <span class="muted">${escapeHtml(item.category)}${item.note ? ' · ' + escapeHtml(item.note) : ''}</span>
-            </td>
-            <td>${formatNum(item.qty)} ${escapeHtml(item.unit)}</td>
-            <td>${formatNum(item.minQty)} ${escapeHtml(item.unit)}</td>
-            <td>${escapeHtml(item.location || '—')}</td>
-            <td><span class="badge ${status.cls}">${status.label}</span></td>
-            <td>
-              <div class="row-actions">
-                <button class="small-btn secondary" onclick="changeQty('${item.id}', -1)">-1</button>
-                <button class="small-btn secondary" onclick="changeQty('${item.id}', 1)">+1</button>
-                <button class="small-btn secondary" onclick="addToShopping('${item.id}')">В закупку</button>
-                <button class="small-btn ghost" onclick="deleteItem('${item.id}')">Удалить</button>
+          <div class="item">
+            <div class="item-top">
+              <div>
+                <div class="name">${escapeHtml(item.name)}</div>
+                <div class="cat">${escapeHtml(item.category)}</div>
               </div>
-            </td>
-          </tr>
+              <div class="badge ${s.key}">${s.text}</div>
+            </div>
+            <div class="meta">
+              <div>Остаток: <b>${Number(item.qty || 0)} ${escapeHtml(item.unit || '')}</b></div>
+              <div>Мин. остаток: <b>${Number(item.minQty || 0)} ${escapeHtml(item.unit || '')}</b></div>
+              <div>Где лежит: <b>${escapeHtml(item.location || '—')}</b></div>
+              <div>Примечание: <b>${escapeHtml(item.note || '—')}</b></div>
+            </div>
+            <div class="actions">
+              <button class="secondary" data-dec="${item.id}">−</button>
+              <div class="qty">${Number(item.qty || 0)}</div>
+              <button data-inc="${item.id}">+</button>
+              <button class="danger" data-del="${item.id}">Удалить</button>
+            </div>
+          </div>
         `;
       }).join('');
+
+      els.items.querySelectorAll('[data-dec]').forEach(btn => btn.addEventListener('click', () => changeQty(btn.dataset.dec, -1)));
+      els.items.querySelectorAll('[data-inc]').forEach(btn => btn.addEventListener('click', () => changeQty(btn.dataset.inc, 1)));
+      els.items.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', () => removeItem(btn.dataset.del)));
     }
 
     function renderShopping() {
       if (!app.state.shopping.length) {
-        els.shoppingList.innerHTML = `<div class="empty">Список закупки пуст.</div>`;
+        els.shopping.innerHTML = '<div class="empty">Список закупки пуст.</div>';
         return;
       }
-      els.shoppingList.innerHTML = app.state.shopping.map(s => `
-        <div class="list-item">
-          <div>
-            <strong>${escapeHtml(s.name)}</strong>
-            <div class="muted">${escapeHtml(s.category)} · Нужно: ${formatNum(s.need)} ${escapeHtml(s.unit)}</div>
-            ${s.note ? `<div class="muted">${escapeHtml(s.note)}</div>` : ''}
-          </div>
-          <div class="row-actions">
-            <button class="small-btn secondary" onclick="changeNeed('${s.id}', -1)">-1</button>
-            <button class="small-btn secondary" onclick="changeNeed('${s.id}', 1)">+1</button>
-            <button class="small-btn ghost" onclick="removeShopping('${s.id}')">Убрать</button>
-          </div>
+
+      els.shopping.innerHTML = app.state.shopping.map(row => `
+        <div class="shopping-item">
+          <div>${escapeHtml(row.text)}</div>
+          <button class="secondary" data-rm-shop="${row.id}">Убрать</button>
         </div>
       `).join('');
-    }
 
-    function renderStats() {
-      const all = app.state.items;
-      const needBuy = all.filter(i => ['buy', 'none'].includes(getStatus(i).key)).length;
-      els.statItems.textContent = all.length;
-      els.statBuy.textContent = needBuy;
-      els.statCats.textContent = getCategoryList().length;
-      els.statShopping.textContent = app.state.shopping.length;
+      els.shopping.querySelectorAll('[data-rm-shop]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          app.state.shopping = app.state.shopping.filter(x => x.id !== btn.dataset.rmShop);
+          saveState();
+          renderShopping();
+        });
+      });
     }
 
     function render() {
-      renderCategories();
+      renderTabs();
+      renderStats();
       renderItems();
       renderShopping();
-      renderStats();
-      saveState();
     }
 
-    function addItem() {
-      const name = els.name.value.trim();
-      const category = normalizeCategory(els.category ? els.category.value : '');
-      if (!category) return alert('Напиши категорию.');
-      if (!name) return alert('Напиши название позиции.');
-      const item = {
-        id: uid(),
-        category,
-        name,
-        unit: els.unit.value,
-        qty: Number(els.qty.value || 0),
-        minQty: Number(els.minQty.value || 0),
-        location: els.location.value.trim(),
-        note: els.note.value.trim()
-      };
-
-      if (!app.state.categories.includes(category)) {
-        app.state.categories.push(category);
-      }
-
-      app.state.items.push(item);
-      app.activeCategory = category;
-      els.name.value = '';
-      els.qty.value = '';
-      els.minQty.value = '';
-      els.location.value = '';
-      els.note.value = '';
-      render();
-    };
-      app.state.items.push(item);
-      els.name.value = '';
-      els.qty.value = '';
-      els.minQty.value = '';
-      els.location.value = '';
-      els.note.value = '';
-      render();
-    }
-
-    function deleteItem(id) {
-      if (!confirm('Удалить позицию?')) return;
-      app.state.items = app.state.items.filter(i => i.id !== id);
-      app.state.shopping = app.state.shopping.filter(i => i.itemId !== id);
-      render();
-    }
-
-    function changeQty(id, delta) {
-      const item = app.state.items.find(i => i.id === id);
-      if (!item) return;
-      item.qty = Math.max(0, Number(item.qty) + delta);
-      render();
-    }
-
-    function addToShopping(id) {
-      const item = app.state.items.find(i => i.id === id);
-      if (!item) return;
-      const existing = app.state.shopping.find(s => s.itemId === id);
-      const deficit = Math.max(1, Number(item.minQty || 0) - Number(item.qty || 0) || 1);
-      if (existing) {
-        existing.need += deficit;
-      } else {
-        app.state.shopping.push({
-          id: uid(),
-          itemId: id,
-          category: item.category,
-          name: item.name,
-          unit: item.unit,
-          note: item.note,
-          need: deficit
-        });
-      }
-      render();
-    }
-
-    function changeNeed(id, delta) {
-      const row = app.state.shopping.find(s => s.id === id);
-      if (!row) return;
-      row.need = Math.max(1, Number(row.need) + delta);
-      render();
-    }
-
-    function removeShopping(id) {
-      app.state.shopping = app.state.shopping.filter(s => s.id !== id);
-      render();
-    }
-
-    function addAllProblemToShopping() {
-      app.state.items
-        .filter(i => ['buy', 'none', 'low'].includes(getStatus(i).key))
-        .forEach(i => addToShopping(i.id));
-    }
-
-    function fillSeed() {
-      if (!confirm('Добавить стартовые позиции? Уже существующие данные останутся.')) return;
-      const existingKeys = new Set(app.state.items.map(i => `${i.category}|${i.name}|${i.note}`));
-      defaultSeedItems.forEach(([category, name, unit, qty, minQty, location, note]) => {
-        const key = `${category}|${name}|${note}`;
-        if (!existingKeys.has(key)) {
-          app.state.items.push({ id: uid(), category, name, unit, qty, minQty, location, note });
-          if (!app.state.categories.includes(category)) app.state.categories.push(category);
-        }
-      });
-      render();
-    }
-
-    function clearAll() {
-      if (!confirm('Это удалит все позиции и список закупки. Продолжить?')) return;
-      app.state = { items: [], shopping: [], categories: [] };
-      app.activeCategory = 'all';
-      render();
-    }
-
-    function exportJson() {
-      const blob = new Blob([JSON.stringify(app.state, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'warehouse-data.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    function importJson(file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(reader.result);
-          if (!data.items || !data.shopping) throw new Error();
-          if (!Array.isArray(data.categories)) data.categories = [];
-          app.state = data;
-          render();
-        } catch {
-          alert('Не удалось импортировать файл.');
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    async function copyShopping() {
-      const text = app.state.shopping.map(s => `• ${s.name} — ${formatNum(s.need)} ${s.unit} (${s.category})`).join('\n');
-      if (!text) return alert('Список закупки пуст.');
-      try {
-        await navigator.clipboard.writeText(text);
-        alert('Список закупки скопирован.');
-      } catch {
-        alert(text);
-      }
-    }
-
-    function markBought() {
-      if (!app.state.shopping.length) return;
-      app.state.shopping.forEach(s => {
-        const item = app.state.items.find(i => i.id === s.itemId);
-        if (item) item.qty = Number(item.qty) + Number(s.need);
-      });
-      app.state.shopping = [];
-      render();
-    }
-
-    function printShopping() {
-      const text = app.state.shopping.map(s => `${s.name} — ${formatNum(s.need)} ${s.unit} (${s.category})`).join('<br>') || 'Список пуст';
-      const win = window.open('', '_blank');
-      win.document.write(`<html><head><title>Список закупки</title></head><body style="font-family:sans-serif;padding:20px"><h1>Список закупки</h1><div>${text}</div></body></html>`);
-      win.document.close();
-      win.print();
-    }
-
-    function escapeHtml(str) {
-      return String(str ?? '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-    }
-
-    function formatNum(v) {
-      const n = Number(v || 0);
-      return Number.isInteger(n) ? String(n) : n.toFixed(2);
-    }
-
-    if (els.addBtn) els.addBtn.addEventListener('click', addItem);
-    if (els.name) els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
-    if (els.category) els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+    els.addBtn.addEventListener('click', addItem);
+    els.addDemoBtn.addEventListener('click', addDemo);
+    els.exportBtn.addEventListener('click', exportData);
+    els.importFile.addEventListener('change', importData);
     els.search.addEventListener('input', renderItems);
-    els.statusFilter.addEventListener('change', renderItems);
-    els.sortBy.addEventListener('change', renderItems);
-    if (els.showAllBtn) els.showAllBtn.addEventListener('click', () => { app.activeCategory = 'all'; render(); });
-    if (els.shoppingFromLowBtn) els.shoppingFromLowBtn.addEventListener('click', addAllProblemToShopping);
-    els.seedBtn.addEventListener('click', fillSeed);
-    els.exportBtn.addEventListener('click', exportJson);
-    els.clearBtn.addEventListener('click', clearAll);
-    els.importFile.addEventListener('change', e => e.target.files[0] && importJson(e.target.files[0]));
-    els.copyBuyBtn.addEventListener('click', copyShopping);
-    if (els.markBoughtBtn) els.markBoughtBtn.addEventListener('click', markBought);
-    els.clearBuyBtn.addEventListener('click', () => { app.state.shopping = []; render(); });
-    els.printBuyBtn.addEventListener('click', printShopping);
-
-    window.changeQty = changeQty;
-    window.addToShopping = addToShopping;
-    window.deleteItem = deleteItem;
-    window.changeNeed = changeNeed;
-    window.removeShopping = removeShopping;
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-    }
+    els.fillShoppingBtn.addEventListener('click', addProblemToShopping);
+    els.clearShoppingBtn.addEventListener('click', clearShopping);
+    els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+    els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 
     render();
   </script>
