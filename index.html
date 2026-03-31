@@ -207,6 +207,8 @@
         </div>
       </div>
       <div class="row" style="margin-top:12px;">
+        <button class="secondary" id="createCategoryBtn">Создать категорию</button>
+        <button class="secondary" id="createSubcategoryBtn">Создать подкатегорию</button>
         <button id="addBtn">Добавить позицию</button>
         <button class="secondary" id="addDemoBtn">Заполнить примером</button>
         <button class="ghost" id="exportJsonBtn">Экспорт JSON</button>
@@ -340,7 +342,7 @@
 
   <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
-    const STORAGE_KEY = 'warehouse-rebuilt-v1';
+    const STORAGE_KEY = 'warehouse-rebuilt-v2';
 
     const els = {
       category: document.getElementById('category'),
@@ -353,6 +355,8 @@
       minQty: document.getElementById('minQty'),
       location: document.getElementById('location'),
       note: document.getElementById('note'),
+      createCategoryBtn: document.getElementById('createCategoryBtn'),
+      createSubcategoryBtn: document.getElementById('createSubcategoryBtn'),
       addBtn: document.getElementById('addBtn'),
       addDemoBtn: document.getElementById('addDemoBtn'),
       exportJsonBtn: document.getElementById('exportJsonBtn'),
@@ -424,14 +428,33 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { items: [], shopping: [] };
+        if (!raw) return { items: [], shopping: [], taxonomy: [] };
         const parsed = JSON.parse(raw);
-        return {
-          items: Array.isArray(parsed.items) ? parsed.items.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [],
-          shopping: Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [],
-        };
+        const items = Array.isArray(parsed.items) ? parsed.items.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [];
+        const shopping = Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [];
+        let taxonomy = Array.isArray(parsed.taxonomy) ? parsed.taxonomy.map(x => ({
+          name: normalize(x.name),
+          subcategories: Array.isArray(x.subcategories) ? x.subcategories.map(normalize).filter(Boolean) : []
+        })).filter(x => x.name) : [];
+
+        if (!taxonomy.length) {
+          const map = new Map();
+          items.forEach(item => {
+            const category = normalize(item.category);
+            const subcategory = normalize(item.subcategory);
+            if (!category) return;
+            if (!map.has(category)) map.set(category, new Set());
+            if (subcategory) map.get(category).add(subcategory);
+          });
+          taxonomy = [...map.entries()].map(([name, subs]) => ({
+            name,
+            subcategories: [...subs].sort((a,b) => a.localeCompare(b, 'ru'))
+          }));
+        }
+
+        return { items, shopping, taxonomy };
       } catch (e) {
-        return { items: [], shopping: [] };
+        return { items: [], shopping: [], taxonomy: [] };
       }
     }
 
@@ -457,19 +480,62 @@
       } catch (e) {}
     }
 
+
+    function findCategoryEntry(category) {
+      const name = normalize(category);
+      return app.state.taxonomy.find(x => normalize(x.name) === name) || null;
+    }
+
+    function ensureCategory(category) {
+      const name = normalize(category);
+      if (!name) return null;
+      let entry = findCategoryEntry(name);
+      if (!entry) {
+        entry = { name, subcategories: [] };
+        app.state.taxonomy.push(entry);
+        app.state.taxonomy.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+      }
+      return entry;
+    }
+
+    function ensureSubcategory(category, subcategory) {
+      const sub = normalize(subcategory);
+      const entry = ensureCategory(category);
+      if (!entry || !sub) return entry;
+      if (!entry.subcategories.some(x => normalize(x) === sub)) {
+        entry.subcategories.push(sub);
+        entry.subcategories.sort((a, b) => a.localeCompare(b, 'ru'));
+      }
+      return entry;
+    }
+
+    function removeCategoryTaxonomy(category) {
+      const name = normalize(category);
+      app.state.taxonomy = app.state.taxonomy.filter(x => normalize(x.name) !== name);
+    }
+
+    function removeSubcategoryTaxonomy(category, subcategory) {
+      const cat = findCategoryEntry(category);
+      const sub = normalize(subcategory);
+      if (!cat) return;
+      cat.subcategories = cat.subcategories.filter(x => normalize(x) !== sub);
+    }
+
     function getCategories() {
-      return [...new Set(app.state.items.map(x => normalize(x.category)).filter(Boolean))]
-        .sort((a,b) => a.localeCompare(b, 'ru'));
+      return [...new Set(
+        app.state.taxonomy.map(x => normalize(x.name)).filter(Boolean)
+          .concat(app.state.items.map(x => normalize(x.category)).filter(Boolean))
+      )].sort((a,b) => a.localeCompare(b, 'ru'));
     }
 
     function getSubcategories(category) {
       if (!category || category === 'all') return [];
-      return [...new Set(
-        app.state.items
-          .filter(x => normalize(x.category) === category)
-          .map(x => normalize(x.subcategory))
-          .filter(Boolean)
-      )].sort((a,b) => a.localeCompare(b, 'ru'));
+      const fromTaxonomy = (findCategoryEntry(category)?.subcategories || []).map(normalize).filter(Boolean);
+      const fromItems = app.state.items
+        .filter(x => normalize(x.category) === category)
+        .map(x => normalize(x.subcategory))
+        .filter(Boolean);
+      return [...new Set(fromTaxonomy.concat(fromItems))].sort((a,b) => a.localeCompare(b, 'ru'));
     }
 
     function refreshCategoryLists() {
@@ -499,12 +565,37 @@
       return { key:'ok', text:'НОРМА' };
     }
 
+
+    function createCategoryOnly() {
+      const category = normalize(els.category.value);
+      if (!category) return alert('Впиши категорию.');
+      ensureCategory(category);
+      app.activeCategory = category;
+      app.activeSubcategory = 'all';
+      saveState();
+      render();
+    }
+
+    function createSubcategoryOnly() {
+      const category = normalize(els.category.value);
+      const subcategory = normalize(els.subcategory.value);
+      if (!category) return alert('Сначала впиши категорию.');
+      if (!subcategory) return alert('Впиши подкатегорию.');
+      ensureSubcategory(category, subcategory);
+      app.activeCategory = category;
+      app.activeSubcategory = subcategory;
+      saveState();
+      render();
+    }
+
     function addItem() {
       const category = normalize(els.category.value);
       const subcategory = normalize(els.subcategory.value);
       const name = normalize(els.name.value);
       if (!category) return alert('Впиши категорию.');
       if (!name) return alert('Впиши название позиции.');
+
+      ensureSubcategory(category, subcategory);
 
       app.state.items.unshift({
         id: uid(),
@@ -539,7 +630,10 @@
         { category:'Кабеля', subcategory:'1 кв', name:'1x1 синяя', unit:'м', qty:7, minQty:15, location:'Полка 1', note:'синяя' },
         { category:'Клеммы', subcategory:'синие', name:'2.5', unit:'шт', qty:0, minQty:20, location:'Ящик 4', note:'' },
       ];
-      demo.reverse().forEach(item => app.state.items.unshift({ id: uid(), ...item }));
+      demo.reverse().forEach(item => {
+        ensureSubcategory(item.category, item.subcategory || '');
+        app.state.items.unshift({ id: uid(), ...item });
+      });
       saveState();
       render();
     }
@@ -565,7 +659,14 @@
           app.state = {
             items: parsed.items.map(x => ({ ...x, subcategory: x.subcategory || '' })),
             shopping: Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [],
+            taxonomy: Array.isArray(parsed.taxonomy) ? parsed.taxonomy.map(x => ({
+              name: normalize(x.name),
+              subcategories: Array.isArray(x.subcategories) ? x.subcategories.map(normalize).filter(Boolean) : []
+            })).filter(x => x.name) : [],
           };
+          if (!app.state.taxonomy.length) {
+            app.state.items.forEach(item => ensureSubcategory(item.category, item.subcategory || ''));
+          }
           saveState();
           render();
           alert('Импортировано.');
@@ -626,6 +727,7 @@
       const ids = new Set(app.state.items.filter(x => normalize(x.category) === category).map(x => x.id));
       app.state.items = app.state.items.filter(x => normalize(x.category) !== category);
       app.state.shopping = app.state.shopping.filter(x => !(ids.has(x.itemId) || normalize(x.category) === category));
+      removeCategoryTaxonomy(category);
       app.activeCategory = 'all';
       app.activeSubcategory = 'all';
       saveState();
@@ -661,6 +763,8 @@
           row.subcategory = newName;
         }
       });
+      removeSubcategoryTaxonomy(category, oldName);
+      ensureSubcategory(category, newName);
       app.activeSubcategory = newName;
       saveState();
       closeSubcategoryModal();
@@ -680,6 +784,7 @@
       );
       app.state.items = app.state.items.filter(item => !(normalize(item.category) === category && normalize(item.subcategory) === subcategory));
       app.state.shopping = app.state.shopping.filter(row => !(ids.has(row.itemId) || (normalize(row.category) === category && normalize(row.subcategory) === subcategory)));
+      removeSubcategoryTaxonomy(category, subcategory);
       app.activeSubcategory = 'all';
       saveState();
       closeSubcategoryModal();
@@ -718,6 +823,9 @@
       const name = normalize(els.editName.value);
       if (!category) return alert('Впиши категорию.');
       if (!name) return alert('Впиши название позиции.');
+
+      removeSubcategoryTaxonomy(oldCategory, oldSubcategory);
+      ensureSubcategory(category, subcategory);
 
       item.category = category;
       item.subcategory = subcategory;
@@ -1132,6 +1240,8 @@
 
     els.category.addEventListener('input', refreshSubcategorySuggestions);
     els.editCategory.addEventListener('input', refreshEditSubcategorySuggestions);
+    els.createCategoryBtn.addEventListener('click', createCategoryOnly);
+    els.createSubcategoryBtn.addEventListener('click', createSubcategoryOnly);
     els.addBtn.addEventListener('click', addItem);
     els.addDemoBtn.addEventListener('click', addDemo);
     els.exportJsonBtn.addEventListener('click', exportJson);
