@@ -60,6 +60,11 @@
       color:var(--text); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:700;
     }
     .tab.active,.subtab.active{background:var(--accent); border-color:var(--accent);}
+
+    .subtab[draggable="true"]{cursor:grab;}
+    .subtab.dragging{opacity:.45;}
+    .subtab.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
+
     .item{
       border:1px solid var(--line); border-radius:16px; background:#0f172a;
       padding:12px; margin-bottom:10px;
@@ -395,7 +400,7 @@
 
   <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
-    const STORAGE_KEY = 'warehouse-rebuilt-v3';
+    const STORAGE_KEY = 'warehouse-rebuilt-v4';
 
     const els = {
       category: document.getElementById('category'),
@@ -543,6 +548,25 @@
     }
 
 
+
+    function parseLeadingNumber(value) {
+      const text = normalize(value).replace(',', '.');
+      const match = text.match(/^\d+(?:\.\d+)?/);
+      return match ? Number(match[0]) : null;
+    }
+
+    function smartCompare(a, b) {
+      const aa = normalize(a);
+      const bb = normalize(b);
+      const na = parseLeadingNumber(aa);
+      const nb = parseLeadingNumber(bb);
+
+      if (na !== null && nb !== null && na !== nb) return na - nb;
+      if (na !== null && nb === null) return -1;
+      if (na === null && nb !== null) return 1;
+      return aa.localeCompare(bb, 'ru', { numeric: true, sensitivity: 'base' });
+    }
+
     function findCategoryEntry(category) {
       const name = normalize(category);
       return app.state.taxonomy.find(x => normalize(x.name) === name) || null;
@@ -555,7 +579,7 @@
       if (!entry) {
         entry = { name, subcategories: [] };
         app.state.taxonomy.push(entry);
-        app.state.taxonomy.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        app.state.taxonomy.sort((a, b) => smartCompare(a.name, b.name));
       }
       return entry;
     }
@@ -566,7 +590,6 @@
       if (!entry || !sub) return entry;
       if (!entry.subcategories.some(x => normalize(x) === sub)) {
         entry.subcategories.push(sub);
-        entry.subcategories.sort((a, b) => a.localeCompare(b, 'ru'));
       }
       return entry;
     }
@@ -587,7 +610,7 @@
       return [...new Set(
         app.state.taxonomy.map(x => normalize(x.name)).filter(Boolean)
           .concat(app.state.items.map(x => normalize(x.category)).filter(Boolean))
-      )].sort((a,b) => a.localeCompare(b, 'ru'));
+      )].sort((a,b) => smartCompare(a, b));
     }
 
     function getSubcategories(category) {
@@ -597,7 +620,77 @@
         .filter(x => normalize(x.category) === category)
         .map(x => normalize(x.subcategory))
         .filter(Boolean);
-      return [...new Set(fromTaxonomy.concat(fromItems))].sort((a,b) => a.localeCompare(b, 'ru'));
+
+      const ordered = [];
+      const seen = new Set();
+
+      fromTaxonomy.forEach(sub => {
+        if (!seen.has(sub)) {
+          seen.add(sub);
+          ordered.push(sub);
+        }
+      });
+
+      const missing = [...new Set(fromItems.filter(sub => !seen.has(sub)))].sort((a,b) => smartCompare(a, b));
+      return ordered.concat(missing);
+    }
+
+
+    let dragSubcategoryName = null;
+
+    function moveSubcategoryBefore(category, dragSub, targetSub) {
+      const entry = findCategoryEntry(category);
+      if (!entry) return;
+      const subs = getSubcategories(category);
+      if (!dragSub || !targetSub || dragSub === targetSub) return;
+
+      const from = subs.findIndex(x => normalize(x) === normalize(dragSub));
+      const to = subs.findIndex(x => normalize(x) === normalize(targetSub));
+      if (from === -1 || to === -1) return;
+
+      const reordered = [...subs];
+      const moved = reordered.splice(from, 1)[0];
+      const adjustedTo = from < to ? to - 1 : to;
+      reordered.splice(adjustedTo, 0, moved);
+
+      entry.subcategories = reordered;
+      saveState();
+      render();
+    }
+
+    function enableSubcategoryDragAndDrop(category) {
+      els.subtabs.querySelectorAll('.subtab[data-subcat]').forEach(btn => {
+        if (btn.dataset.subcat === 'all') return;
+
+        btn.setAttribute('draggable', 'true');
+
+        btn.addEventListener('dragstart', () => {
+          dragSubcategoryName = btn.dataset.subcat;
+          btn.classList.add('dragging');
+        });
+
+        btn.addEventListener('dragend', () => {
+          btn.classList.remove('dragging');
+          els.subtabs.querySelectorAll('.subtab.drag-over').forEach(x => x.classList.remove('drag-over'));
+          dragSubcategoryName = null;
+        });
+
+        btn.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (!dragSubcategoryName || dragSubcategoryName === btn.dataset.subcat) return;
+          btn.classList.add('drag-over');
+        });
+
+        btn.addEventListener('dragleave', () => {
+          btn.classList.remove('drag-over');
+        });
+
+        btn.addEventListener('drop', (e) => {
+          e.preventDefault();
+          btn.classList.remove('drag-over');
+          moveSubcategoryBefore(category, dragSubcategoryName, btn.dataset.subcat);
+        });
+      });
     }
 
     function refreshCategoryLists() {
@@ -1167,6 +1260,8 @@
           render();
         });
       });
+
+      enableSubcategoryDragAndDrop(app.activeCategory);
     }
 
     function renderStats() {
