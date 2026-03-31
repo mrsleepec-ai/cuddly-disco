@@ -158,6 +158,17 @@
     }
     .tree-empty{color:var(--muted); font-size:13px;}
 
+    
+    .stat.clickable{cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
+    .stat.clickable:hover{transform:translateY(-1px); border-color:#60a5fa;}
+    .quick-list{display:grid; gap:8px;}
+    .quick-row{
+      display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;
+      padding:10px 12px; border:1px solid #475569; border-radius:12px; background:#111827;
+    }
+    .quick-title{font-weight:700;}
+    .quick-meta{font-size:12px; color:var(--muted); margin-top:4px;}
+
     @media (max-width:720px){
       .grid,.stats,.shopping-item{grid-template-columns:1fr;}
       .actions{grid-template-columns:50px 1fr 50px 84px;}
@@ -242,10 +253,10 @@
 
     <section class="panel">
       <div class="stats">
-        <div class="stat"><div class="n" id="statItems">0</div><div class="t">Позиций</div></div>
-        <div class="stat"><div class="n" id="statCategories">0</div><div class="t">Категорий</div></div>
-        <div class="stat"><div class="n" id="statNeedBuy">0</div><div class="t">Купить</div></div>
-        <div class="stat"><div class="n" id="statZero">0</div><div class="t">Ноль</div></div>
+        <div class="stat clickable" id="statCategoriesCard"><div class="n" id="statCategories">0</div><div class="t">Категорий</div></div>
+        <div class="stat clickable" id="statItemsCard"><div class="n" id="statItems">0</div><div class="t">Позиций</div></div>
+        <div class="stat clickable" id="statWarnCard"><div class="n" id="statWarn">0</div><div class="t">Мало</div></div>
+        <div class="stat clickable" id="statNeedBuyCard"><div class="n" id="statNeedBuy">0</div><div class="t">Купить</div></div>
       </div>
     </section>
 
@@ -279,6 +290,18 @@
     </section>
   </div>
 
+
+
+  <div class="modal" id="quickModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 style="margin:0;font-size:18px;" id="quickModalTitle">Быстрый доступ</h2>
+        <button class="secondary" id="closeQuickBtn">Закрыть</button>
+      </div>
+      <div class="row" id="quickModalActions" style="margin-bottom:12px;"></div>
+      <div class="quick-list" id="quickModalList"></div>
+    </div>
+  </div>
 
   <div class="modal" id="structureModal">
     <div class="modal-card">
@@ -421,6 +444,11 @@
       importFile: document.getElementById('importFile'),
       statItems: document.getElementById('statItems'),
       statCategories: document.getElementById('statCategories'),
+      statWarn: document.getElementById('statWarn'),
+      statItemsCard: document.getElementById('statItemsCard'),
+      statCategoriesCard: document.getElementById('statCategoriesCard'),
+      statNeedBuyCard: document.getElementById('statNeedBuyCard'),
+      statWarnCard: document.getElementById('statWarnCard'),
       statNeedBuy: document.getElementById('statNeedBuy'),
       statZero: document.getElementById('statZero'),
       tabs: document.getElementById('tabs'),
@@ -436,6 +464,11 @@
       clearShoppingBtn: document.getElementById('clearShoppingBtn'),
       pdfShoppingBtn: document.getElementById('pdfShoppingBtn'),
       exportShoppingExcelBtn: document.getElementById('exportShoppingExcelBtn'),
+      quickModal: document.getElementById('quickModal'),
+      quickModalTitle: document.getElementById('quickModalTitle'),
+      quickModalActions: document.getElementById('quickModalActions'),
+      quickModalList: document.getElementById('quickModalList'),
+      closeQuickBtn: document.getElementById('closeQuickBtn'),
       structureModal: document.getElementById('structureModal'),
       closeStructureBtn: document.getElementById('closeStructureBtn'),
       managerCategoryInput: document.getElementById('managerCategoryInput'),
@@ -1264,13 +1297,157 @@
       enableSubcategoryDragAndDrop(app.activeCategory);
     }
 
+
+    function openQuickModal(title, rowsHtml, actionsHtml = '') {
+      els.quickModalTitle.textContent = title;
+      els.quickModalActions.innerHTML = actionsHtml;
+      els.quickModalList.innerHTML = rowsHtml || '<div class="empty">Пока пусто.</div>';
+      els.quickModal.classList.add('show');
+    }
+
+    function closeQuickModal() {
+      els.quickModal.classList.remove('show');
+      els.quickModalActions.innerHTML = '';
+      els.quickModalList.innerHTML = '';
+    }
+
+    function openCategoriesQuickView() {
+      const categories = getCategories();
+      const rows = categories.map(category => {
+        const subs = getSubcategories(category).length;
+        const count = app.state.items.filter(x => normalize(x.category) === category).length;
+        return `
+          <div class="quick-row">
+            <div>
+              <div class="quick-title">${escapeHtml(category)}</div>
+              <div class="quick-meta">Позиций: ${count} · Подкатегорий: ${subs}</div>
+            </div>
+            <button data-go-category="${escapeHtml(category)}">Открыть</button>
+          </div>
+        `;
+      }).join('');
+      openQuickModal('Категории', rows);
+      els.quickModalList.querySelectorAll('[data-go-category]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          app.activeCategory = btn.dataset.goCategory;
+          app.activeSubcategory = 'all';
+          closeQuickModal();
+          render();
+          document.querySelector('#items')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+
+    function openItemsQuickView() {
+      const list = [...app.state.items]
+        .sort((a, b) => {
+          const cat = normalize(a.category).localeCompare(normalize(b.category), 'ru');
+          if (cat !== 0) return cat;
+          const sub = normalize(a.subcategory).localeCompare(normalize(b.subcategory), 'ru');
+          if (sub !== 0) return sub;
+          return normalize(a.name).localeCompare(normalize(b.name), 'ru');
+        });
+
+      const rows = list.map(item => `
+        <div class="quick-row">
+          <div>
+            <div class="quick-title">${escapeHtml(item.name || '—')}</div>
+            <div class="quick-meta">${escapeHtml(item.category || '—')}${item.subcategory ? ' · ' + escapeHtml(item.subcategory) : ''} · Остаток: ${Number(item.qty || 0)} ${escapeHtml(item.unit || '')}</div>
+          </div>
+          <button data-go-item="${item.id}">Открыть</button>
+        </div>
+      `).join('');
+
+      openQuickModal('Позиции', rows);
+      els.quickModalList.querySelectorAll('[data-go-item]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = app.state.items.find(x => x.id === btn.dataset.goItem);
+          if (!item) return;
+          app.activeCategory = normalize(item.category) || 'all';
+          app.activeSubcategory = normalize(item.subcategory) || 'all';
+          closeQuickModal();
+          render();
+          document.querySelector(`[data-id="${item.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+    }
+
+    function openNeedBuyQuickView() {
+      const list = app.state.items.filter(x => ['buy','none'].includes(statusFor(x).key));
+      const rows = list.map(item => {
+        const s = statusFor(item);
+        return `
+          <div class="quick-row">
+            <div>
+              <div class="quick-title">${escapeHtml(item.name)}</div>
+              <div class="quick-meta">${escapeHtml(item.category)}${item.subcategory ? ' · ' + escapeHtml(item.subcategory) : ''} · Статус: ${s.text}</div>
+            </div>
+            <button data-go-item="${item.id}">Открыть</button>
+          </div>
+        `;
+      }).join('');
+      const actions = `
+        <button id="quickAddNeedBuyBtn">Добавить всё проблемное</button>
+        <button class="ghost" id="quickExportBuyBtn">Экспорт закупки в XLSX</button>
+        <button class="ghost" id="quickPdfBuyBtn">PDF</button>
+      `;
+      openQuickModal('Купить', rows, actions);
+
+      const hookRowButtons = () => {
+        els.quickModalList.querySelectorAll('[data-go-item]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const item = app.state.items.find(x => x.id === btn.dataset.goItem);
+            if (!item) return;
+            app.activeCategory = normalize(item.category) || 'all';
+            app.activeSubcategory = normalize(item.subcategory) || 'all';
+            closeQuickModal();
+            render();
+            document.querySelector(`[data-id="${item.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        });
+      };
+      hookRowButtons();
+
+      document.getElementById('quickAddNeedBuyBtn')?.addEventListener('click', () => {
+        addProblemToShopping();
+        closeQuickModal();
+      });
+      document.getElementById('quickExportBuyBtn')?.addEventListener('click', exportShoppingExcel);
+      document.getElementById('quickPdfBuyBtn')?.addEventListener('click', exportShoppingPdf);
+    }
+
+    function openWarnQuickView() {
+      const list = app.state.items.filter(x => statusFor(x).key === 'warn');
+      const rows = list.map(item => `
+        <div class="quick-row">
+          <div>
+            <div class="quick-title">${escapeHtml(item.name)}</div>
+            <div class="quick-meta">${escapeHtml(item.category)}${item.subcategory ? ' · ' + escapeHtml(item.subcategory) : ''} · Остаток: ${Number(item.qty || 0)} ${escapeHtml(item.unit || '')}</div>
+          </div>
+          <button data-go-item="${item.id}">Открыть</button>
+        </div>
+      `).join('');
+      openQuickModal('Мало', rows);
+      els.quickModalList.querySelectorAll('[data-go-item]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = app.state.items.find(x => x.id === btn.dataset.goItem);
+          if (!item) return;
+          app.activeCategory = normalize(item.category) || 'all';
+          app.activeSubcategory = normalize(item.subcategory) || 'all';
+          closeQuickModal();
+          render();
+          document.querySelector(`[data-id="${item.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+    }
+
     function renderStats() {
       const needBuy = app.state.items.filter(x => ['buy','none'].includes(statusFor(x).key)).length;
-      const zero = app.state.items.filter(x => Number(x.qty || 0) <= 0).length;
+      const warn = app.state.items.filter(x => statusFor(x).key === 'warn').length;
       els.statItems.textContent = app.state.items.length;
       els.statCategories.textContent = getCategories().length;
       els.statNeedBuy.textContent = needBuy;
-      els.statZero.textContent = zero;
+      els.statWarn.textContent = warn;
     }
 
     let dragItemId = null;
@@ -1552,6 +1729,13 @@
       renderItems();
       renderShopping();
     }
+
+    els.closeQuickBtn.addEventListener('click', closeQuickModal);
+    els.quickModal.addEventListener('click', e => { if (e.target === els.quickModal) closeQuickModal(); });
+    els.statCategoriesCard.addEventListener('click', openCategoriesQuickView);
+    els.statItemsCard.addEventListener('click', openItemsQuickView);
+    els.statNeedBuyCard.addEventListener('click', openNeedBuyQuickView);
+    els.statWarnCard.addEventListener('click', openWarnQuickView);
 
     els.category.addEventListener('input', refreshSubcategorySuggestions);
     els.editCategory.addEventListener('input', refreshEditSubcategorySuggestions);
