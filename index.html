@@ -1020,7 +1020,7 @@
 
       ensureSubcategory(category, subcategory);
 
-      app.state.items.unshift({
+      app.state.items.push({
         id: uid(),
         category,
         subcategory,
@@ -1055,7 +1055,7 @@
       ];
       demo.reverse().forEach(item => {
         ensureSubcategory(item.category, item.subcategory || '');
-        app.state.items.unshift({ id: uid(), ...item });
+        app.state.items.push({ id: uid(), ...item });
       });
       saveState();
       render();
