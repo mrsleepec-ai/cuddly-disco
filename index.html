@@ -187,6 +187,29 @@
       text-align:left; border:1px solid #cbd5e1; padding:8px; color:#111827;
     }
     
+    
+    .modal{
+      position:fixed; inset:0; z-index:1200;
+      display:none; align-items:flex-end; justify-content:center;
+      background:rgba(2,6,23,.62);
+      padding:16px;
+    }
+    .modal.show{display:flex;}
+    .modal-card{
+      width:min(760px,100%);
+      max-height:92dvh;
+      overflow:auto;
+      background:#0f172a;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 12px 36px rgba(0,0,0,.35);
+    }
+    .modal-head{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom:12px;
+    }
+
     @media (max-width:720px){
       .print-overlay{
         padding:0;
@@ -331,6 +354,60 @@
   </div>
 
 
+
+  <div class="modal" id="editModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 style="margin:0;font-size:18px;">Редактировать позицию</h2>
+        <button class="secondary" id="closeEditBtn">Закрыть</button>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label for="editCategory">Категория</label>
+          <input id="editCategory" list="editCategoryList" placeholder="Категория" />
+          <datalist id="editCategoryList"></datalist>
+        </div>
+        <div>
+          <label for="editName">Наименование</label>
+          <input id="editName" placeholder="Наименование" />
+        </div>
+        <div>
+          <label for="editUnit">Ед. изм.</label>
+          <select id="editUnit">
+            <option value="шт">шт</option>
+            <option value="м">м</option>
+            <option value="уп">уп</option>
+            <option value="компл">компл</option>
+          </select>
+        </div>
+        <div>
+          <label for="editQty">Остаток</label>
+          <input id="editQty" type="number" min="0" step="1" />
+        </div>
+        <div>
+          <label for="editMinQty">Мин. остаток</label>
+          <input id="editMinQty" type="number" min="0" step="1" />
+        </div>
+        <div>
+          <label for="editLocation">Где лежит</label>
+          <input id="editLocation" placeholder="Место хранения" />
+        </div>
+        <div class="full">
+          <label for="editNote">Примечание</label>
+          <textarea id="editNote" placeholder="Примечание"></textarea>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="saveEditBtn">Сохранить</button>
+        <button class="secondary" id="moveUpBtn">Выше</button>
+        <button class="secondary" id="moveDownBtn">Ниже</button>
+        <button class="danger" id="deleteFromEditBtn">Удалить</button>
+      </div>
+    </div>
+  </div>
+
   <div class="print-overlay" id="printOverlay">
     <div class="print-bar">
       <button class="secondary" id="closePrintBtn">Назад</button>
@@ -386,11 +463,26 @@
       updateToast: document.getElementById('updateToast'),
       reloadAppBtn: document.getElementById('reloadAppBtn'),
       dismissUpdateBtn: document.getElementById('dismissUpdateBtn'),
+      editModal: document.getElementById('editModal'),
+      closeEditBtn: document.getElementById('closeEditBtn'),
+      saveEditBtn: document.getElementById('saveEditBtn'),
+      moveUpBtn: document.getElementById('moveUpBtn'),
+      moveDownBtn: document.getElementById('moveDownBtn'),
+      deleteFromEditBtn: document.getElementById('deleteFromEditBtn'),
+      editCategory: document.getElementById('editCategory'),
+      editCategoryList: document.getElementById('editCategoryList'),
+      editName: document.getElementById('editName'),
+      editUnit: document.getElementById('editUnit'),
+      editQty: document.getElementById('editQty'),
+      editMinQty: document.getElementById('editMinQty'),
+      editLocation: document.getElementById('editLocation'),
+      editNote: document.getElementById('editNote'),
     };
 
     const app = {
       activeCategory: 'all',
       state: loadState(),
+      editingId: null,
     };
 
     const APP_BUILD = '20260330161134';
@@ -644,6 +736,79 @@
       render();
     }
 
+    function openEditModal(id) {
+      const item = app.state.items.find(x => x.id === id);
+      if (!item) return;
+
+      app.editingId = id;
+      const categories = getCategories();
+      els.editCategoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+      els.editCategory.value = item.category || '';
+      els.editName.value = item.name || '';
+      els.editUnit.value = item.unit || 'шт';
+      els.editQty.value = Number(item.qty || 0);
+      els.editMinQty.value = Number(item.minQty || 0);
+      els.editLocation.value = item.location || '';
+      els.editNote.value = item.note || '';
+      els.editModal.classList.add('show');
+    }
+
+    function closeEditModal() {
+      app.editingId = null;
+      els.editModal.classList.remove('show');
+    }
+
+    function saveEditedItem() {
+      const item = app.state.items.find(x => x.id === app.editingId);
+      if (!item) return;
+
+      const category = normalize(els.editCategory.value);
+      const name = normalize(els.editName.value);
+      if (!category) return alert('Впиши категорию.');
+      if (!name) return alert('Впиши название позиции.');
+
+      const oldCategory = item.category || '';
+
+      item.category = category;
+      item.name = name;
+      item.unit = els.editUnit.value;
+      item.qty = Math.max(0, Number(els.editQty.value || 0));
+      item.minQty = Math.max(0, Number(els.editMinQty.value || 0));
+      item.location = normalize(els.editLocation.value);
+      item.note = normalize(els.editNote.value);
+
+      app.state.shopping.forEach(row => {
+        if (row.itemId === item.id) {
+          row.category = item.category;
+          row.name = item.name;
+          row.note = item.note || '';
+        }
+      });
+
+      if (app.activeCategory === oldCategory && oldCategory !== category) {
+        app.activeCategory = category;
+      }
+
+      saveState();
+      closeEditModal();
+      render();
+    }
+
+    function moveEditedItem(direction) {
+      const index = app.state.items.findIndex(x => x.id === app.editingId);
+      if (index === -1) return;
+
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= app.state.items.length) return;
+
+      const item = app.state.items[index];
+      app.state.items.splice(index, 1);
+      app.state.items.splice(newIndex, 0, item);
+      saveState();
+      render();
+      openEditModal(item.id);
+    }
+
     function deleteCurrentCategory() {
       if (!app.activeCategory || app.activeCategory === 'all') {
         alert('Сначала выбери конкретную категорию.');
@@ -742,7 +907,7 @@
               <button class="secondary" data-dec="${item.id}">−</button>
               <input class="qty qty-input" type="number" min="0" step="1" value="${Number(item.qty || 0)}" data-qty-input="${item.id}" />
               <button data-inc="${item.id}">+</button>
-              <button class="danger" data-del="${item.id}">Удалить</button>
+              <button class="secondary" data-edit="${item.id}">Ред.</button>
             </div>
           </div>
         `;
@@ -750,7 +915,7 @@
 
       els.items.querySelectorAll('[data-dec]').forEach(btn => btn.addEventListener('click', () => changeQty(btn.dataset.dec, -1)));
       els.items.querySelectorAll('[data-inc]').forEach(btn => btn.addEventListener('click', () => changeQty(btn.dataset.inc, 1)));
-      els.items.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', () => removeItem(btn.dataset.del)));
+      els.items.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', () => openEditModal(btn.dataset.edit)));
       els.items.querySelectorAll('[data-qty-input]').forEach(input => {
         input.addEventListener('change', () => setQty(input.dataset.qtyInput, input.value));
         input.addEventListener('blur', () => setQty(input.dataset.qtyInput, input.value));
@@ -961,6 +1126,19 @@
     els.pdfShoppingBtn.addEventListener('click', exportShoppingPdf);
     els.exportShoppingExcelBtn.addEventListener('click', exportShoppingExcel);
     els.deleteCategoryBtn.addEventListener('click', deleteCurrentCategory);
+    els.closeEditBtn.addEventListener('click', closeEditModal);
+    els.saveEditBtn.addEventListener('click', saveEditedItem);
+    els.moveUpBtn.addEventListener('click', () => moveEditedItem(-1));
+    els.moveDownBtn.addEventListener('click', () => moveEditedItem(1));
+    els.deleteFromEditBtn.addEventListener('click', () => {
+      if (!app.editingId) return;
+      const id = app.editingId;
+      closeEditModal();
+      removeItem(id);
+    });
+    els.editModal.addEventListener('click', (e) => {
+      if (e.target === els.editModal) closeEditModal();
+    });
     els.closePrintBtn.addEventListener('click', closePrintOverlay);
     els.confirmPrintBtn.addEventListener('click', () => window.print());
     els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
