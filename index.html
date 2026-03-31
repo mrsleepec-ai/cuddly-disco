@@ -19,8 +19,7 @@
     }
     body{position:fixed; inset:0;}
     .app{
-      height:100%; overflow-y:auto; overflow-x:hidden;
-      -webkit-overflow-scrolling:touch;
+      height:100%; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
       padding:
         calc(env(safe-area-inset-top, 0px) + 12px)
         max(12px, env(safe-area-inset-right, 0px))
@@ -28,13 +27,6 @@
         max(12px, env(safe-area-inset-left, 0px));
       background:linear-gradient(180deg,#0b1220 0%, #111827 100%);
     }
-    .header{
-      position:sticky; top:0; z-index:20; margin:-12px -12px 12px; padding:
-        calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
-      background:rgba(15,23,42,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
-    }
-    .title{font-size:24px; font-weight:800; margin:0 0 4px;}
-    .sub{font-size:13px; color:var(--muted);}
     .panel{
       background:rgba(30,41,59,.9); border:1px solid var(--line);
       border-radius:18px; padding:14px; margin-bottom:12px;
@@ -46,8 +38,7 @@
     label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
     input, select, textarea{
       width:100%; border-radius:12px; border:1px solid #475569;
-      background:#0f172a; color:var(--text); padding:12px 12px; font-size:16px;
-      outline:none;
+      background:#0f172a; color:var(--text); padding:12px; font-size:16px; outline:none;
     }
     textarea{resize:vertical; min-height:78px;}
     .row{display:flex; gap:8px; flex-wrap:wrap;}
@@ -57,32 +48,25 @@
     }
     button.secondary{background:#334155;}
     button.ghost{background:transparent; border:1px solid #475569; color:var(--text);}
+    button.danger{background:#991b1b;}
     .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
     .stat{background:#0f172a; border:1px solid var(--line); border-radius:14px; padding:10px;}
     .stat .n{font-size:22px; font-weight:800;}
     .stat .t{font-size:12px; color:var(--muted);}
-    
-    .tabs-wrap{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      margin-bottom:12px;
+    .tabs-wrap,.subtabs-wrap{display:flex; gap:8px; align-items:center; margin-bottom:10px;}
+    .tabs,.subtabs{display:flex; gap:8px; overflow:auto; padding-bottom:2px; flex:1;}
+    .tab,.subtab{
+      white-space:nowrap; background:#0f172a; border:1px solid #475569;
+      color:var(--text); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:700;
     }
-    .tabs{
-      display:flex; gap:8px; overflow:auto; padding-bottom:2px; flex:1;
-    }
-    .delete-cat-btn{
-      white-space:nowrap;
-      min-height:42px;
-    }
-
-    .tabs{display:flex; gap:8px; overflow:auto; padding-bottom:2px; flex:1;}
-    .tab{white-space:nowrap; background:#0f172a; border:1px solid #475569;}
-    .tab.active{background:var(--accent); border-color:var(--accent);}
+    .tab.active,.subtab.active{background:var(--accent); border-color:var(--accent);}
     .item{
       border:1px solid var(--line); border-radius:16px; background:#0f172a;
       padding:12px; margin-bottom:10px;
     }
+    .item[draggable="true"]{cursor:grab;}
+    .item.dragging{opacity:.45;}
+    .item.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
     .item-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;}
     .name{font-size:17px; font-weight:800; line-height:1.2;}
     .cat{font-size:12px; color:var(--muted); margin-top:4px;}
@@ -92,64 +76,44 @@
     }
     .ok{background:var(--ok);} .warn{background:var(--warn);} .buy{background:var(--buy);} .none{background:var(--none);}
     .meta{font-size:13px; color:var(--muted); display:grid; gap:4px; margin-bottom:10px;}
-    .actions{display:grid; grid-template-columns:44px 1fr 44px 1fr; gap:8px; align-items:center;}
+    .actions{display:grid; grid-template-columns:44px 1fr 44px 84px; gap:8px; align-items:center;}
     .qty{
-      width:100%;
-      text-align:center; font-size:16px; font-weight:800; padding:10px; border-radius:12px;
+      width:100%; text-align:center; font-size:16px; font-weight:800; padding:10px; border-radius:12px;
       border:1px solid var(--line); background:#111827; color:var(--text);
     }
-    .qty-input{
-      appearance:textfield;
-      -moz-appearance:textfield;
-    }
-    .qty-input::-webkit-outer-spin-button,
-    .qty-input::-webkit-inner-spin-button{
-      -webkit-appearance:none;
-      margin:0;
-    }
+    .qty-input{appearance:textfield; -moz-appearance:textfield;}
+    .qty-input::-webkit-outer-spin-button,.qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
     .empty{
       padding:16px; text-align:center; color:var(--muted); border:1px dashed #475569; border-radius:16px;
       background:#0f172a;
     }
-    .muted{color:var(--muted);}
-    .danger{background:#991b1b;}
     .shopping-group{
-      border:1px solid var(--line);
-      border-radius:14px;
-      background:#0f172a;
-      margin-bottom:10px;
-      overflow:hidden;
+      border:1px solid var(--line); border-radius:14px; background:#0f172a; margin-bottom:10px; overflow:hidden;
     }
     .shopping-group-head{
-      padding:12px 12px 8px;
-      border-bottom:1px solid rgba(148,163,184,.14);
-      font-weight:800;
-      font-size:15px;
+      padding:12px 12px 8px; border-bottom:1px solid rgba(148,163,184,.14); font-weight:800; font-size:15px;
     }
     .shopping-item{
-      display:grid;
-      grid-template-columns:1.4fr 110px 110px auto;
-      gap:8px;
-      align-items:start;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(148,163,184,.12);
+      display:grid; grid-template-columns:1.4fr 110px 110px auto; gap:8px; align-items:start;
+      padding:10px 12px; border-bottom:1px solid rgba(148,163,184,.12);
     }
     .shopping-item:last-child{border-bottom:0;}
     .shopping-meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35;}
-    .shop-field input,.shop-field select{
-      padding:10px;
-      font-size:14px;
-      min-height:42px;
-    }
+    .shop-field input,.shop-field select{padding:10px;font-size:14px;min-height:42px;}
     .shop-name{font-weight:700;}
-    
+    .modal{
+      position:fixed; inset:0; z-index:1200; display:none; align-items:flex-end; justify-content:center;
+      background:rgba(2,6,23,.62); padding:16px;
+    }
+    .modal.show{display:flex;}
+    .modal-card{
+      width:min(760px,100%); max-height:92dvh; overflow:auto; background:#0f172a; border:1px solid var(--line);
+      border-radius:18px; padding:14px; box-shadow:0 12px 36px rgba(0,0,0,.35);
+    }
+    .modal-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;}
     .print-overlay{
-      position:fixed; inset:0; z-index:999;
-      background:#ffffff; color:#111827;
-      display:none; overflow:auto;
-      min-height:100dvh;
-      height:100dvh;
-      width:100%;
+      position:fixed; inset:0; z-index:999; background:#ffffff; color:#111827;
+      display:none; overflow:auto; min-height:100dvh; height:100dvh; width:100%;
       padding:
         calc(env(safe-area-inset-top, 0px) + 12px)
         max(12px, env(safe-area-inset-right, 0px))
@@ -158,77 +122,26 @@
     }
     .print-overlay.show{display:block;}
     .print-bar{
-      position:sticky; top:0; z-index:2;
-      display:flex; gap:8px; flex-wrap:wrap;
-      padding:0 0 12px;
-      background:#ffffff;
-      border-bottom:1px solid #cbd5e1;
-      margin-bottom:12px;
-    }
-    .print-bar button{
-      min-height:44px;
+      position:sticky; top:0; z-index:2; display:flex; gap:8px; flex-wrap:wrap;
+      padding:0 0 12px; background:#ffffff; border-bottom:1px solid #cbd5e1; margin-bottom:12px;
     }
     .print-doc{
-      max-width:900px; margin:0 auto;
-      background:#ffffff; border:1px solid #cbd5e1; border-radius:16px;
-      padding:18px;
-      min-height:calc(100dvh - 90px);
+      max-width:900px; margin:0 auto; background:#ffffff; border:1px solid #cbd5e1; border-radius:16px;
+      padding:18px; min-height:calc(100dvh - 90px);
     }
     .print-doc h1{margin:0 0 6px; font-size:24px; color:#111827;}
     .print-doc .muted{color:#475569; margin-bottom:18px; font-size:12px;}
     .print-section{margin-bottom:22px;}
     .print-section h2{
-      margin:0 0 10px; font-size:18px; color:#111827;
-      border-bottom:1px solid #cbd5e1; padding-bottom:6px;
+      margin:0 0 10px; font-size:18px; color:#111827; border-bottom:1px solid #cbd5e1; padding-bottom:6px;
     }
     .print-table{width:100%; border-collapse:collapse; font-size:12px;}
-    .print-table th,.print-table td{
-      text-align:left; border:1px solid #cbd5e1; padding:8px; color:#111827;
-    }
-    
-    
-    .modal{
-      position:fixed; inset:0; z-index:1200;
-      display:none; align-items:flex-end; justify-content:center;
-      background:rgba(2,6,23,.62);
-      padding:16px;
-    }
-    .modal.show{display:flex;}
-    .modal-card{
-      width:min(760px,100%);
-      max-height:92dvh;
-      overflow:auto;
-      background:#0f172a;
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:14px;
-      box-shadow:0 12px 36px rgba(0,0,0,.35);
-    }
-    .modal-head{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      margin-bottom:12px;
-    }
-
-    
-    .item[draggable="true"]{cursor:grab;}
-    .item.dragging{opacity:.45;}
-    .item.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
-
-    
-    .subtabs{
-      display:flex; gap:8px; overflow:auto; padding-bottom:2px; margin-top:10px;
-    }
-    .subtab{
-      white-space:nowrap; background:#0f172a; border:1px solid #475569;
-      color:var(--text); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:700;
-    }
-    .subtab.active{background:var(--accent); border-color:var(--accent);}
-
+    .print-table th,.print-table td{text-align:left; border:1px solid #cbd5e1; padding:8px; color:#111827;}
     @media (max-width:720px){
-      .print-overlay{
-        padding:0;
-        background:#ffffff;
-      }
+      .grid,.stats,.shopping-item{grid-template-columns:1fr;}
+      .actions{grid-template-columns:50px 1fr 50px 84px;}
+      button{min-height:46px;}
+      .print-overlay{padding:0;background:#ffffff;}
       .print-bar{
         padding:
           calc(env(safe-area-inset-top, 0px) + 10px)
@@ -237,56 +150,19 @@
           max(12px, env(safe-area-inset-left, 0px));
         margin-bottom:0;
       }
-      .print-doc{
-        min-height:calc(100dvh - 70px);
-        max-width:none;
-        border:0;
-        border-radius:0;
-        padding:16px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);
-      }
+      .print-doc{min-height:calc(100dvh - 70px);max-width:none;border:0;border-radius:0;padding:16px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);}
     }
-
     @media print{
       body > .app{display:none !important;}
       .print-overlay{display:block !important; position:static; inset:auto; padding:0; background:white;}
       .print-bar{display:none !important;}
       .print-doc{max-width:none; margin:0; border:0; border-radius:0; padding:0;}
     }
-
-    
-    .update-toast{
-      position:fixed;
-      right:12px;
-      bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
-      left:12px;
-      z-index:1000;
-      display:none;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-      background:rgba(15,23,42,.96);
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-      box-shadow:0 8px 24px rgba(0,0,0,.3);
-    }
-    .update-toast.show{display:flex;}
-    .update-toast .msg{font-size:14px; line-height:1.35;}
-
-    @media (max-width:720px){
-      .shopping-item{
-        grid-template-columns:1fr;
-      }
-    }
-    @media (max-width:720px){
-      .grid,.stats{grid-template-columns:1fr;}
-      .actions{grid-template-columns:50px 1fr 50px 1fr;}
-      button{min-height:46px;}
-    }
   </style>
 </head>
 <body>
   <div class="app">
+
     <section class="panel">
       <h2>Добавить позицию</h2>
       <div class="grid">
@@ -296,13 +172,13 @@
           <datalist id="categoryList"></datalist>
         </div>
         <div>
-          <label for="name">Наименование</label>
-          <input id="name" placeholder="Например: 4x1.5" />
+          <label for="subcategory">Подкатегория</label>
+          <input id="subcategory" list="subcategoryList" placeholder="Например: 0.75 кв" />
+          <datalist id="subcategoryList"></datalist>
         </div>
         <div>
-          <label for="subcategory">Подкатегория</label>
-          <input id="subcategory" list="subcategoryList" placeholder="Например: 0.75 кв / 1 кв / PG" />
-          <datalist id="subcategoryList"></datalist>
+          <label for="name">Наименование</label>
+          <input id="name" placeholder="Например: 4x1.5" />
         </div>
         <div>
           <label for="unit">Ед. изм.</label>
@@ -333,9 +209,9 @@
       <div class="row" style="margin-top:12px;">
         <button id="addBtn">Добавить позицию</button>
         <button class="secondary" id="addDemoBtn">Заполнить примером</button>
-        <button class="ghost" id="exportBtn">Экспорт</button>
+        <button class="ghost" id="exportJsonBtn">Экспорт JSON</button>
         <label class="ghost" style="display:flex;align-items:center;justify-content:center;padding:12px 14px;border-radius:12px;cursor:pointer;">
-          Импорт
+          Импорт JSON
           <input id="importFile" type="file" accept=".json" style="display:none;" />
         </label>
       </div>
@@ -352,8 +228,14 @@
 
     <section class="panel">
       <h2>Склад</h2>
-      <div class="tabs-wrap"><div class="tabs" id="tabs"></div><button class="danger delete-cat-btn" id="deleteCategoryBtn">Удалить категорию</button></div>
-      <div class="subtabs" id="subtabs"></div>
+      <div class="tabs-wrap">
+        <div class="tabs" id="tabs"></div>
+        <button class="danger" id="deleteCategoryBtn" style="display:none;">Удалить категорию</button>
+      </div>
+      <div class="subtabs-wrap">
+        <div class="subtabs" id="subtabs"></div>
+        <button class="secondary" id="manageSubcategoryBtn" style="display:none;">Управлять подкатегорией</button>
+      </div>
       <div class="row" style="margin:12px 0;">
         <input id="search" placeholder="Поиск по названию / месту / примечанию" />
         <button class="ghost" id="exportStockExcelBtn">Экспорт склада в XLSX</button>
@@ -373,7 +255,24 @@
     </section>
   </div>
 
-
+  <div class="modal" id="subcategoryModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 style="margin:0;font-size:18px;">Подкатегория</h2>
+        <button class="secondary" id="closeSubcategoryBtn">Закрыть</button>
+      </div>
+      <div class="grid">
+        <div class="full">
+          <label for="renameSubcategoryInput">Новое имя подкатегории</label>
+          <input id="renameSubcategoryInput" placeholder="Например: 1.5 кв" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="saveSubcategoryBtn">Сохранить</button>
+        <button class="danger" id="deleteSubcategoryBtn">Удалить подкатегорию</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal" id="editModal">
     <div class="modal-card">
@@ -389,13 +288,13 @@
           <datalist id="editCategoryList"></datalist>
         </div>
         <div>
-          <label for="editName">Наименование</label>
-          <input id="editName" placeholder="Наименование" />
-        </div>
-        <div>
           <label for="editSubcategory">Подкатегория</label>
           <input id="editSubcategory" list="editSubcategoryList" placeholder="Подкатегория" />
           <datalist id="editSubcategoryList"></datalist>
+        </div>
+        <div>
+          <label for="editName">Наименование</label>
+          <input id="editName" placeholder="Наименование" />
         </div>
         <div>
           <label for="editUnit">Ед. изм.</label>
@@ -439,25 +338,16 @@
     <div class="print-doc" id="printContent"></div>
   </div>
 
-
-  <div class="update-toast" id="updateToast">
-    <div class="msg">Есть новая версия приложения.</div>
-    <div class="row" style="margin:0;">
-      <button id="reloadAppBtn">Обновить</button>
-      <button class="secondary" id="dismissUpdateBtn">Позже</button>
-    </div>
-  </div>
-
   <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
-    const STORAGE_KEY = 'warehouse-clean-v1';
+    const STORAGE_KEY = 'warehouse-rebuilt-v1';
 
     const els = {
       category: document.getElementById('category'),
-      categoryList: document.getElementById('categoryList'),
-      name: document.getElementById('name'),
       subcategory: document.getElementById('subcategory'),
+      categoryList: document.getElementById('categoryList'),
       subcategoryList: document.getElementById('subcategoryList'),
+      name: document.getElementById('name'),
       unit: document.getElementById('unit'),
       qty: document.getElementById('qty'),
       minQty: document.getElementById('minQty'),
@@ -465,7 +355,7 @@
       note: document.getElementById('note'),
       addBtn: document.getElementById('addBtn'),
       addDemoBtn: document.getElementById('addDemoBtn'),
-      exportBtn: document.getElementById('exportBtn'),
+      exportJsonBtn: document.getElementById('exportJsonBtn'),
       importFile: document.getElementById('importFile'),
       statItems: document.getElementById('statItems'),
       statCategories: document.getElementById('statCategories'),
@@ -474,6 +364,7 @@
       tabs: document.getElementById('tabs'),
       subtabs: document.getElementById('subtabs'),
       deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
+      manageSubcategoryBtn: document.getElementById('manageSubcategoryBtn'),
       search: document.getElementById('search'),
       exportStockExcelBtn: document.getElementById('exportStockExcelBtn'),
       items: document.getElementById('items'),
@@ -482,35 +373,71 @@
       clearShoppingBtn: document.getElementById('clearShoppingBtn'),
       pdfShoppingBtn: document.getElementById('pdfShoppingBtn'),
       exportShoppingExcelBtn: document.getElementById('exportShoppingExcelBtn'),
-      printOverlay: document.getElementById('printOverlay'),
-      printContent: document.getElementById('printContent'),
-      closePrintBtn: document.getElementById('closePrintBtn'),
-      confirmPrintBtn: document.getElementById('confirmPrintBtn'),
-      updateToast: document.getElementById('updateToast'),
-      reloadAppBtn: document.getElementById('reloadAppBtn'),
-      dismissUpdateBtn: document.getElementById('dismissUpdateBtn'),
+      subcategoryModal: document.getElementById('subcategoryModal'),
+      closeSubcategoryBtn: document.getElementById('closeSubcategoryBtn'),
+      renameSubcategoryInput: document.getElementById('renameSubcategoryInput'),
+      saveSubcategoryBtn: document.getElementById('saveSubcategoryBtn'),
+      deleteSubcategoryBtn: document.getElementById('deleteSubcategoryBtn'),
       editModal: document.getElementById('editModal'),
       closeEditBtn: document.getElementById('closeEditBtn'),
       saveEditBtn: document.getElementById('saveEditBtn'),
       deleteFromEditBtn: document.getElementById('deleteFromEditBtn'),
       editCategory: document.getElementById('editCategory'),
-      editCategoryList: document.getElementById('editCategoryList'),
-      editName: document.getElementById('editName'),
       editSubcategory: document.getElementById('editSubcategory'),
+      editCategoryList: document.getElementById('editCategoryList'),
       editSubcategoryList: document.getElementById('editSubcategoryList'),
+      editName: document.getElementById('editName'),
       editUnit: document.getElementById('editUnit'),
       editQty: document.getElementById('editQty'),
       editMinQty: document.getElementById('editMinQty'),
       editLocation: document.getElementById('editLocation'),
       editNote: document.getElementById('editNote'),
+      printOverlay: document.getElementById('printOverlay'),
+      printContent: document.getElementById('printContent'),
+      closePrintBtn: document.getElementById('closePrintBtn'),
+      confirmPrintBtn: document.getElementById('confirmPrintBtn'),
     };
 
     const app = {
       activeCategory: 'all',
       activeSubcategory: 'all',
-      state: loadState(),
       editingId: null,
+      state: loadState(),
     };
+
+    function uid() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    function normalize(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { items: [], shopping: [] };
+        const parsed = JSON.parse(raw);
+        return {
+          items: Array.isArray(parsed.items) ? parsed.items.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [],
+          shopping: Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [],
+        };
+      } catch (e) {
+        return { items: [], shopping: [] };
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
+    }
 
     async function checkVersionJsonAndRefresh() {
       try {
@@ -527,165 +454,40 @@
           url.searchParams.set('v', remoteVersion);
           window.location.replace(url.toString());
         }
-      } catch (e) {
-        // ignore version check errors
-      }
-    }
-
-    let dragItemId = null;
-
-    function moveItemBefore(dragId, targetId) {
-      if (!dragId || !targetId || dragId === targetId) return;
-
-      const from = app.state.items.findIndex(x => x.id === dragId);
-      const to = app.state.items.findIndex(x => x.id === targetId);
-      if (from === -1 || to === -1) return;
-
-      const moved = app.state.items.splice(from, 1)[0];
-      const adjustedTo = from < to ? to - 1 : to;
-      app.state.items.splice(adjustedTo, 0, moved);
-
-      saveState();
-      setTimeout(checkVersionJsonAndRefresh, 1200);
-    window.addEventListener('focus', checkVersionJsonAndRefresh);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') checkVersionJsonAndRefresh();
-    });
-
-    render();
-    }
-
-    function enableDragAndDrop() {
-      els.items.querySelectorAll('.item[data-id]').forEach(card => {
-        card.addEventListener('dragstart', () => {
-          dragItemId = card.dataset.id;
-          card.classList.add('dragging');
-        });
-
-        card.addEventListener('dragend', () => {
-          card.classList.remove('dragging');
-          els.items.querySelectorAll('.item.drag-over').forEach(x => x.classList.remove('drag-over'));
-          dragItemId = null;
-        });
-
-        card.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          if (!dragItemId || dragItemId === card.dataset.id) return;
-          card.classList.add('drag-over');
-        });
-
-        card.addEventListener('dragleave', () => {
-          card.classList.remove('drag-over');
-        });
-
-        card.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const targetId = card.dataset.id;
-          card.classList.remove('drag-over');
-          moveItemBefore(dragItemId, targetId);
-        });
-      });
-    }
-
-
-    const APP_BUILD = '20260330161134';
-    let updateDismissedForBuild = '';
-
-    function buildCheckUrl() {
-      const url = new URL(window.location.href);
-      url.searchParams.set('__check', Date.now().toString());
-      return url.toString();
-    }
-
-    function showUpdateToast(nextBuild) {
-      if (updateDismissedForBuild === nextBuild) return;
-      els.updateToast.classList.add('show');
-      els.reloadAppBtn.onclick = () => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('v', nextBuild);
-        window.location.replace(url.toString());
-      };
-      els.dismissUpdateBtn.onclick = () => {
-        updateDismissedForBuild = nextBuild;
-        els.updateToast.classList.remove('show');
-      };
-    }
-
-    async function checkForAppUpdate() {
-      try {
-        const res = await fetch(buildCheckUrl(), {
-          cache: 'no-store',
-          headers: { 'cache-control': 'no-cache' }
-        });
-        const text = await res.text();
-        const match = text.match(/<meta\s+name=["']app-build["']\s+content=["']([^"']+)["']/i);
-        const remoteBuild = match ? match[1] : '';
-        if (remoteBuild && remoteBuild !== APP_BUILD) {
-          showUpdateToast(remoteBuild);
-        }
-      } catch (e) {
-        // ignore network/cache check failures
-      }
-    }
-
-
-    function uid() {
-      return Math.random().toString(36).slice(2, 10);
-    }
-
-    function normalize(value) {
-      return String(value || '').trim().replace(/\s+/g, ' ');
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;');
-    }
-
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { items: [], shopping: [] };
-        const parsed = JSON.parse(raw);
-        return {
-          items: Array.isArray(parsed.items) ? parsed.items.map(item => ({
-            ...item,
-            subcategory: item.subcategory || ''
-          })) : [],
-          shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
-        };
-      } catch (e) {
-        return { items: [], shopping: [] };
-      }
-    }
-
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
-    }
-
-
-    function getSubcategories(category) {
-      if (!category || category === 'all') return [];
-      return [...new Set(
-        app.state.items
-          .filter(x => x.category === category)
-          .map(x => normalize(x.subcategory))
-          .filter(Boolean)
-      )].sort((a,b) => a.localeCompare(b, 'ru'));
-    }
-
-    function refreshSubcategorySuggestions() {
-      const category = normalize(els.category.value);
-      const list = category ? getSubcategories(category) : [];
-      els.subcategoryList.innerHTML = list.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+      } catch (e) {}
     }
 
     function getCategories() {
       return [...new Set(app.state.items.map(x => normalize(x.category)).filter(Boolean))]
         .sort((a,b) => a.localeCompare(b, 'ru'));
+    }
+
+    function getSubcategories(category) {
+      if (!category || category === 'all') return [];
+      return [...new Set(
+        app.state.items
+          .filter(x => normalize(x.category) === category)
+          .map(x => normalize(x.subcategory))
+          .filter(Boolean)
+      )].sort((a,b) => a.localeCompare(b, 'ru'));
+    }
+
+    function refreshCategoryLists() {
+      const cats = getCategories();
+      els.categoryList.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+      els.editCategoryList.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+    }
+
+    function refreshSubcategorySuggestions() {
+      const category = normalize(els.category.value);
+      const subs = getSubcategories(category);
+      els.subcategoryList.innerHTML = subs.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+    }
+
+    function refreshEditSubcategorySuggestions() {
+      const category = normalize(els.editCategory.value);
+      const subs = getSubcategories(category);
+      els.editSubcategoryList.innerHTML = subs.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
     }
 
     function statusFor(item) {
@@ -699,8 +501,8 @@
 
     function addItem() {
       const category = normalize(els.category.value);
-      const name = normalize(els.name.value);
       const subcategory = normalize(els.subcategory.value);
+      const name = normalize(els.name.value);
       if (!category) return alert('Впиши категорию.');
       if (!name) return alert('Впиши название позиции.');
 
@@ -718,27 +520,41 @@
 
       app.activeCategory = category;
       app.activeSubcategory = subcategory || 'all';
+
       els.name.value = '';
       els.subcategory.value = '';
       els.qty.value = '';
       els.minQty.value = '';
       els.location.value = '';
       els.note.value = '';
+
       saveState();
       render();
     }
 
-    function exportData() {
+    function addDemo() {
+      const demo = [
+        { category:'Кабеля', subcategory:'0.75 кв', name:'0.75x3', unit:'м', qty:42, minQty:15, location:'Полка 1', note:'' },
+        { category:'Кабеля', subcategory:'0.75 кв', name:'0.75x4', unit:'м', qty:18, minQty:15, location:'Полка 1', note:'' },
+        { category:'Кабеля', subcategory:'1 кв', name:'1x1 синяя', unit:'м', qty:7, minQty:15, location:'Полка 1', note:'синяя' },
+        { category:'Клеммы', subcategory:'синие', name:'2.5', unit:'шт', qty:0, minQty:20, location:'Ящик 4', note:'' },
+      ];
+      demo.reverse().forEach(item => app.state.items.unshift({ id: uid(), ...item }));
+      saveState();
+      render();
+    }
+
+    function exportJson() {
       const blob = new Blob([JSON.stringify(app.state, null, 2)], {type:'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'sklad-backup.json';
+      a.download = 'warehouse-backup.json';
       a.click();
       URL.revokeObjectURL(url);
     }
 
-    function importData(event) {
+    function importJson(event) {
       const file = event.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
@@ -747,17 +563,8 @@
           const parsed = JSON.parse(reader.result);
           if (!Array.isArray(parsed.items)) throw new Error();
           app.state = {
-            items: parsed.items,
-            shopping: Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({
-              id: x.id || uid(),
-              itemId: x.itemId || '',
-              category: x.category || '',
-              subcategory: x.subcategory || '',
-              name: x.name || x.text || '',
-              unit: x.unit || 'шт',
-              buyQty: x.buyQty ?? '',
-              note: x.note || ''
-            })) : [],
+            items: parsed.items.map(x => ({ ...x, subcategory: x.subcategory || '' })),
+            shopping: Array.isArray(parsed.shopping) ? parsed.shopping.map(x => ({ ...x, subcategory: x.subcategory || '' })) : [],
           };
           saveState();
           render();
@@ -771,12 +578,15 @@
       reader.readAsText(file, 'utf-8');
     }
 
-    function changeQty(id, delta) {
-      const item = app.state.items.find(x => x.id === id);
-      if (!item) return;
-      item.qty = Math.max(0, Number(item.qty || 0) + delta);
-      saveState();
-      render();
+    function filteredItems() {
+      const q = normalize(els.search.value).toLowerCase();
+      return app.state.items.filter(item => {
+        const inCategory = app.activeCategory === 'all' ? true : normalize(item.category) === app.activeCategory;
+        const inSubcategory = app.activeSubcategory === 'all' ? true : normalize(item.subcategory) === app.activeSubcategory;
+        const hay = [item.name, item.category, item.subcategory, item.location, item.note].join(' ').toLowerCase();
+        const inSearch = !q || hay.includes(q);
+        return inCategory && inSubcategory && inSearch;
+      });
     }
 
     function setQty(id, value) {
@@ -784,6 +594,14 @@
       if (!item) return;
       const num = Number(value);
       item.qty = Number.isFinite(num) ? Math.max(0, num) : 0;
+      saveState();
+      render();
+    }
+
+    function changeQty(id, delta) {
+      const item = app.state.items.find(x => x.id === id);
+      if (!item) return;
+      item.qty = Math.max(0, Number(item.qty || 0) + delta);
       saveState();
       render();
     }
@@ -796,15 +614,135 @@
       render();
     }
 
-    function filteredItems() {
-      const q = normalize(els.search.value).toLowerCase();
-      return app.state.items.filter(item => {
-        const inCategory = app.activeCategory === 'all' ? true : item.category === app.activeCategory;
-        const inSubcategory = app.activeSubcategory === 'all' ? true : normalize(item.subcategory) === app.activeSubcategory;
-        const hay = [item.name, item.category, item.subcategory, item.location, item.note].join(' ').toLowerCase();
-        const inSearch = !q || hay.includes(q);
-        return inCategory && inSubcategory && inSearch;
+    function deleteCurrentCategory() {
+      if (!app.activeCategory || app.activeCategory === 'all') {
+        alert('Сначала выбери конкретную категорию.');
+        return;
+      }
+      const category = app.activeCategory;
+      const ok = confirm(`Удалить категорию "${category}" и все позиции внутри неё?`);
+      if (!ok) return;
+
+      const ids = new Set(app.state.items.filter(x => normalize(x.category) === category).map(x => x.id));
+      app.state.items = app.state.items.filter(x => normalize(x.category) !== category);
+      app.state.shopping = app.state.shopping.filter(x => !(ids.has(x.itemId) || normalize(x.category) === category));
+      app.activeCategory = 'all';
+      app.activeSubcategory = 'all';
+      saveState();
+      render();
+    }
+
+    function openSubcategoryModal() {
+      if (!app.activeCategory || app.activeCategory === 'all' || !app.activeSubcategory || app.activeSubcategory === 'all') {
+        alert('Сначала выбери конкретную подкатегорию.');
+        return;
+      }
+      els.renameSubcategoryInput.value = app.activeSubcategory;
+      els.subcategoryModal.classList.add('show');
+    }
+
+    function closeSubcategoryModal() {
+      els.subcategoryModal.classList.remove('show');
+    }
+
+    function renameCurrentSubcategory() {
+      const category = app.activeCategory;
+      const oldName = app.activeSubcategory;
+      const newName = normalize(els.renameSubcategoryInput.value);
+      if (!newName) return alert('Впиши новое имя подкатегории.');
+
+      app.state.items.forEach(item => {
+        if (normalize(item.category) === category && normalize(item.subcategory) === oldName) {
+          item.subcategory = newName;
+        }
       });
+      app.state.shopping.forEach(row => {
+        if (normalize(row.category) === category && normalize(row.subcategory) === oldName) {
+          row.subcategory = newName;
+        }
+      });
+      app.activeSubcategory = newName;
+      saveState();
+      closeSubcategoryModal();
+      render();
+    }
+
+    function deleteCurrentSubcategory() {
+      const category = app.activeCategory;
+      const subcategory = app.activeSubcategory;
+      const ok = confirm(`Удалить подкатегорию "${subcategory}" и все позиции внутри неё?`);
+      if (!ok) return;
+
+      const ids = new Set(
+        app.state.items
+          .filter(item => normalize(item.category) === category && normalize(item.subcategory) === subcategory)
+          .map(item => item.id)
+      );
+      app.state.items = app.state.items.filter(item => !(normalize(item.category) === category && normalize(item.subcategory) === subcategory));
+      app.state.shopping = app.state.shopping.filter(row => !(ids.has(row.itemId) || (normalize(row.category) === category && normalize(row.subcategory) === subcategory)));
+      app.activeSubcategory = 'all';
+      saveState();
+      closeSubcategoryModal();
+      render();
+    }
+
+    function openEditModal(id) {
+      const item = app.state.items.find(x => x.id === id);
+      if (!item) return;
+      app.editingId = id;
+      refreshCategoryLists();
+      els.editCategory.value = item.category || '';
+      refreshEditSubcategorySuggestions();
+      els.editSubcategory.value = item.subcategory || '';
+      els.editName.value = item.name || '';
+      els.editUnit.value = item.unit || 'шт';
+      els.editQty.value = Number(item.qty || 0);
+      els.editMinQty.value = Number(item.minQty || 0);
+      els.editLocation.value = item.location || '';
+      els.editNote.value = item.note || '';
+      els.editModal.classList.add('show');
+    }
+
+    function closeEditModal() {
+      app.editingId = null;
+      els.editModal.classList.remove('show');
+    }
+
+    function saveEditedItem() {
+      const item = app.state.items.find(x => x.id === app.editingId);
+      if (!item) return;
+      const oldCategory = normalize(item.category);
+      const oldSubcategory = normalize(item.subcategory);
+      const category = normalize(els.editCategory.value);
+      const subcategory = normalize(els.editSubcategory.value);
+      const name = normalize(els.editName.value);
+      if (!category) return alert('Впиши категорию.');
+      if (!name) return alert('Впиши название позиции.');
+
+      item.category = category;
+      item.subcategory = subcategory;
+      item.name = name;
+      item.unit = els.editUnit.value;
+      item.qty = Math.max(0, Number(els.editQty.value || 0));
+      item.minQty = Math.max(0, Number(els.editMinQty.value || 0));
+      item.location = normalize(els.editLocation.value);
+      item.note = normalize(els.editNote.value);
+
+      app.state.shopping.forEach(row => {
+        if (row.itemId === item.id) {
+          row.category = item.category;
+          row.subcategory = item.subcategory || '';
+          row.name = item.name;
+          row.note = item.note || '';
+        }
+      });
+
+      if (app.activeCategory === oldCategory && oldCategory !== category) app.activeCategory = category;
+      if (app.activeSubcategory === oldSubcategory && oldSubcategory !== subcategory) app.activeSubcategory = subcategory || 'all';
+
+      saveState();
+      closeEditModal();
+      render();
     }
 
     function addProblemToShopping() {
@@ -847,162 +785,124 @@
       render();
     }
 
-    function openEditModal(id) {
-      const item = app.state.items.find(x => x.id === id);
-      if (!item) return;
-
-      app.editingId = id;
-      const categories = getCategories();
-      els.editCategoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
-      els.editCategory.value = item.category || '';
-      els.editName.value = item.name || '';
-      els.editSubcategoryList.innerHTML = getSubcategories(item.category || '').map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
-      els.editSubcategory.value = item.subcategory || '';
-      els.editUnit.value = item.unit || 'шт';
-      els.editQty.value = Number(item.qty || 0);
-      els.editMinQty.value = Number(item.minQty || 0);
-      els.editLocation.value = item.location || '';
-      els.editNote.value = item.note || '';
-      els.editModal.classList.add('show');
-    }
-
-    function closeEditModal() {
-      app.editingId = null;
-      els.editModal.classList.remove('show');
-    }
-
-    function saveEditedItem() {
-      const item = app.state.items.find(x => x.id === app.editingId);
-      if (!item) return;
-
-      const category = normalize(els.editCategory.value);
-      const name = normalize(els.editName.value);
-      const subcategory = normalize(els.editSubcategory.value);
-      if (!category) return alert('Впиши категорию.');
-      if (!name) return alert('Впиши название позиции.');
-
-      const oldCategory = item.category || '';
-
-      item.category = category;
-      item.name = name;
-      item.subcategory = subcategory;
-      item.unit = els.editUnit.value;
-      item.qty = Math.max(0, Number(els.editQty.value || 0));
-      item.minQty = Math.max(0, Number(els.editMinQty.value || 0));
-      item.location = normalize(els.editLocation.value);
-      item.note = normalize(els.editNote.value);
-
-      app.state.shopping.forEach(row => {
-        if (row.itemId === item.id) {
-          row.category = item.category;
-          row.name = item.name;
-          row.note = item.note || '';
-        }
-      });
-
-      if (app.activeCategory === oldCategory && oldCategory !== category) {
-        app.activeCategory = category;
-      }
-
-      saveState();
-      closeEditModal();
-      render();
-    }
-
-
-    function deleteCurrentCategory() {
-      if (!app.activeCategory || app.activeCategory === 'all') {
-        alert('Сначала выбери конкретную категорию.');
-        return;
-      }
-
-      const category = app.activeCategory;
-      const itemsInCategory = app.state.items.filter(x => x.category === category);
-
-      if (!itemsInCategory.length) {
-        app.activeCategory = 'all';
-      app.activeSubcategory = 'all';
-        saveState();
-        render();
-        return;
-      }
-
-      const confirmed = confirm(`Удалить категорию "${category}" и все позиции внутри неё?`);
-      if (!confirmed) return;
-
-      const ids = new Set(itemsInCategory.map(x => x.id));
-      app.state.items = app.state.items.filter(x => x.category !== category);
-      app.state.shopping = app.state.shopping.filter(x => !ids.has(x.itemId) && x.category !== category);
-      app.activeCategory = 'all';
-      saveState();
-      render();
-    }
-
     function renderTabs() {
+      refreshCategoryLists();
       const categories = getCategories();
-
-      els.categoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
 
       if (!categories.length) {
         els.tabs.innerHTML = '<div class="empty">Категории появятся после добавления первой позиции.</div>';
         els.subtabs.innerHTML = '';
         els.deleteCategoryBtn.style.display = 'none';
+        els.manageSubcategoryBtn.style.display = 'none';
         return;
       }
 
       if (app.activeCategory !== 'all' && !categories.includes(app.activeCategory)) {
         app.activeCategory = 'all';
       }
-
-      els.deleteCategoryBtn.style.display = app.activeCategory !== 'all' ? 'inline-flex' : 'none';
       if (app.activeCategory === 'all') app.activeSubcategory = 'all';
 
-      const buttons = [
+      const catButtons = [
         `<button class="tab ${app.activeCategory === 'all' ? 'active' : ''}" data-cat="all">Все</button>`,
         ...categories.map(c => `<button class="tab ${app.activeCategory === c ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`)
       ];
+      els.tabs.innerHTML = catButtons.join('');
+      els.deleteCategoryBtn.style.display = app.activeCategory !== 'all' ? 'inline-flex' : 'none';
 
-      els.tabs.innerHTML = buttons.join('');
       els.tabs.querySelectorAll('[data-cat]').forEach(btn => {
         btn.addEventListener('click', () => {
           app.activeCategory = btn.dataset.cat;
           app.activeSubcategory = 'all';
-          renderItems();
-          renderTabs();
+          render();
         });
       });
 
-      const subcategories = getSubcategories(app.activeCategory);
-      if (app.activeCategory === 'all' || !subcategories.length) {
+      const subs = getSubcategories(app.activeCategory);
+      if (!subs.length || app.activeCategory === 'all') {
         els.subtabs.innerHTML = '';
-      } else {
-        if (app.activeSubcategory !== 'all' && !subcategories.includes(app.activeSubcategory)) {
-          app.activeSubcategory = 'all';
-        }
-        const subButtons = [
-          `<button class="subtab ${app.activeSubcategory === 'all' ? 'active' : ''}" data-subcat="all">Все</button>`,
-          ...subcategories.map(s => `<button class="subtab ${app.activeSubcategory === s ? 'active' : ''}" data-subcat="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
-        ];
-        els.subtabs.innerHTML = subButtons.join('');
-        els.subtabs.querySelectorAll('[data-subcat]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            app.activeSubcategory = btn.dataset.subcat;
-            renderItems();
-            renderTabs();
-          });
-        });
+        els.manageSubcategoryBtn.style.display = 'none';
+        return;
       }
+
+      if (app.activeSubcategory !== 'all' && !subs.includes(app.activeSubcategory)) app.activeSubcategory = 'all';
+
+      const subButtons = [
+        `<button class="subtab ${app.activeSubcategory === 'all' ? 'active' : ''}" data-subcat="all">Все</button>`,
+        ...subs.map(s => `<button class="subtab ${app.activeSubcategory === s ? 'active' : ''}" data-subcat="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
+      ];
+      els.subtabs.innerHTML = subButtons.join('');
+      els.manageSubcategoryBtn.style.display = app.activeSubcategory !== 'all' ? 'inline-flex' : 'none';
+
+      els.subtabs.querySelectorAll('[data-subcat]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          app.activeSubcategory = btn.dataset.subcat;
+          render();
+        });
+      });
     }
 
     function renderStats() {
-      const categories = getCategories();
       const needBuy = app.state.items.filter(x => ['buy','none'].includes(statusFor(x).key)).length;
       const zero = app.state.items.filter(x => Number(x.qty || 0) <= 0).length;
-
       els.statItems.textContent = app.state.items.length;
-      els.statCategories.textContent = categories.length;
+      els.statCategories.textContent = getCategories().length;
       els.statNeedBuy.textContent = needBuy;
       els.statZero.textContent = zero;
+    }
+
+    let dragItemId = null;
+
+    function moveItemBefore(dragId, targetId) {
+      if (!dragId || !targetId || dragId === targetId) return;
+      const visible = filteredItems().map(x => x.id);
+      const fromVisible = visible.indexOf(dragId);
+      const toVisible = visible.indexOf(targetId);
+      if (fromVisible === -1 || toVisible === -1) return;
+
+      const newVisible = [...visible];
+      const movedId = newVisible.splice(fromVisible, 1)[0];
+      const adjusted = fromVisible < toVisible ? toVisible - 1 : toVisible;
+      newVisible.splice(adjusted, 0, movedId);
+
+      const visibleSet = new Set(visible);
+      const newItems = [];
+      let visiblePtr = 0;
+      for (const oldItem of app.state.items) {
+        if (visibleSet.has(oldItem.id)) {
+          const newId = newVisible[visiblePtr++];
+          newItems.push(app.state.items.find(x => x.id === newId));
+        } else {
+          newItems.push(oldItem);
+        }
+      }
+      app.state.items = newItems;
+      saveState();
+      render();
+    }
+
+    function enableDragAndDrop() {
+      els.items.querySelectorAll('.item[data-id]').forEach(card => {
+        card.addEventListener('dragstart', () => {
+          dragItemId = card.dataset.id;
+          card.classList.add('dragging');
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          els.items.querySelectorAll('.item.drag-over').forEach(x => x.classList.remove('drag-over'));
+          dragItemId = null;
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (!dragItemId || dragItemId === card.dataset.id) return;
+          card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          moveItemBefore(dragItemId, card.dataset.id);
+        });
+      });
     }
 
     function renderItems() {
@@ -1063,32 +963,33 @@
         groups[key].push(row);
       });
 
-      const htmlGroups = Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0], 'ru')).map(([category, rows]) => `
-        <div class="shopping-group">
-          <div class="shopping-group-head">${escapeHtml(category)}</div>
-          ${rows.map(row => `
-            <div class="shopping-item">
-              <div>
-                <div class="shop-name">${escapeHtml(row.name || '—')}</div>${row.subcategory ? `<div class="shopping-meta">Подкатегория: ${escapeHtml(row.subcategory)}</div>` : ""}
-                <div class="shopping-meta">Примечание: ${escapeHtml(row.note || '—')}</div>
+      els.shopping.innerHTML = Object.entries(groups)
+        .sort((a,b) => a[0].localeCompare(b[0], 'ru'))
+        .map(([category, rows]) => `
+          <div class="shopping-group">
+            <div class="shopping-group-head">${escapeHtml(category)}</div>
+            ${rows.map(row => `
+              <div class="shopping-item">
+                <div>
+                  <div class="shop-name">${escapeHtml(row.name || '—')}</div>
+                  ${row.subcategory ? `<div class="shopping-meta">Подкатегория: ${escapeHtml(row.subcategory)}</div>` : ''}
+                  <div class="shopping-meta">Примечание: ${escapeHtml(row.note || '—')}</div>
+                </div>
+                <div class="shop-field">
+                  <input type="number" min="0" step="1" value="${row.buyQty ?? ''}" data-shop-qty="${row.id}" placeholder="Кол-во" />
+                </div>
+                <div class="shop-field">
+                  <select data-shop-unit="${row.id}">
+                    ${['шт','м','уп','компл'].map(u => `<option value="${u}" ${row.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="row" style="justify-content:flex-end;">
+                  <button class="secondary" data-rm-shop="${row.id}">Убрать</button>
+                </div>
               </div>
-              <div class="shop-field">
-                <input type="number" min="0" step="1" value="${row.buyQty ?? ''}" data-shop-qty="${row.id}" placeholder="Кол-во" />
-              </div>
-              <div class="shop-field">
-                <select data-shop-unit="${row.id}">
-                  ${['шт','м','уп','компл'].map(u => `<option value="${u}" ${row.unit === u ? 'selected' : ''}>${u}</option>`).join('')}
-                </select>
-              </div>
-              <div class="row" style="justify-content:flex-end;">
-                <button class="secondary" data-rm-shop="${row.id}">Убрать</button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `).join('');
-
-      els.shopping.innerHTML = htmlGroups;
+            `).join('')}
+          </div>
+        `).join('');
 
       els.shopping.querySelectorAll('[data-rm-shop]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1097,86 +998,14 @@
           renderShopping();
         });
       });
-
       els.shopping.querySelectorAll('[data-shop-qty]').forEach(input => {
         const handler = () => updateShoppingItem(input.dataset.shopQty, { buyQty: input.value === '' ? '' : Math.max(0, Number(input.value || 0)) });
         input.addEventListener('change', handler);
         input.addEventListener('blur', handler);
       });
-
       els.shopping.querySelectorAll('[data-shop-unit]').forEach(select => {
         select.addEventListener('change', () => updateShoppingItem(select.dataset.shopUnit, { unit: select.value }));
       });
-    }
-
-    function exportStockExcel() {
-      if (!window.XLSX) {
-        alert('Модуль XLSX не загрузился. Проверь интернет и попробуй ещё раз.');
-        return;
-      }
-
-      const rows = [...app.state.items]
-        .sort((a, b) => {
-          const cat = String(a.category || '').localeCompare(String(b.category || ''), 'ru');
-          if (cat !== 0) return cat;
-          return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
-        })
-        .map(item => {
-          const s = statusFor(item);
-          return {
-            'Категория': item.category || '',
-            'Подкатегория': item.subcategory || '',
-            'Наименование': item.name || '',
-            'Ед. изм.': item.unit || '',
-            'Остаток': Number(item.qty || 0),
-            'Мин. остаток': Number(item.minQty || 0),
-            'Статус': s.text,
-            'Где лежит': item.location || '',
-            'Примечание': item.note || ''
-          };
-        });
-
-      if (!rows.length) {
-        alert('Склад пуст.');
-        return;
-      }
-
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Склад');
-      XLSX.writeFileXLSX(wb, 'sklad_export.xlsx', { compression: true });
-    }
-
-    function exportShoppingExcel() {
-      if (!window.XLSX) {
-        alert('Модуль XLSX не загрузился. Проверь интернет и попробуй ещё раз.');
-        return;
-      }
-
-      if (!app.state.shopping.length) {
-        alert('Список закупки пуст.');
-        return;
-      }
-
-      const rows = [...app.state.shopping]
-        .sort((a, b) => {
-          const cat = String(a.category || '').localeCompare(String(b.category || ''), 'ru');
-          if (cat !== 0) return cat;
-          return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
-        })
-        .map(row => ({
-          'Категория': row.category || '',
-          'Подкатегория': row.subcategory || '',
-          'Наименование': row.name || '',
-          'Кол-во к покупке': row.buyQty === '' ? '' : Number(row.buyQty || 0),
-          'Ед. изм.': row.unit || 'шт',
-          'Примечание': row.note || ''
-        }));
-
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Закупка');
-      XLSX.writeFileXLSX(wb, 'shopping_list_export.xlsx', { compression: true });
     }
 
     function buildShoppingPrintHtml() {
@@ -1215,8 +1044,7 @@
           </section>
         `).join('');
 
-      const now = new Date();
-      const dateText = now.toLocaleDateString('ru-RU');
+      const dateText = new Date().toLocaleDateString('ru-RU');
       return `
         <h1>Список закупки</h1>
         <div class="muted">Дата: ${dateText}</div>
@@ -1225,10 +1053,7 @@
     }
 
     function exportShoppingPdf() {
-      if (!app.state.shopping.length) {
-        alert('Список закупки пуст.');
-        return;
-      }
+      if (!app.state.shopping.length) return alert('Список закупки пуст.');
       els.printContent.innerHTML = buildShoppingPrintHtml();
       els.printOverlay.classList.add('show');
     }
@@ -1236,6 +1061,66 @@
     function closePrintOverlay() {
       els.printOverlay.classList.remove('show');
       els.printContent.innerHTML = '';
+    }
+
+    function exportStockExcel() {
+      if (!window.XLSX) return alert('Модуль XLSX не загрузился. Проверь интернет и попробуй ещё раз.');
+      if (!app.state.items.length) return alert('Склад пуст.');
+
+      const rows = [...app.state.items]
+        .sort((a,b) => {
+          const cat = String(a.category || '').localeCompare(String(b.category || ''), 'ru');
+          if (cat !== 0) return cat;
+          const sub = String(a.subcategory || '').localeCompare(String(b.subcategory || ''), 'ru');
+          if (sub !== 0) return sub;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+        })
+        .map(item => {
+          const s = statusFor(item);
+          return {
+            'Категория': item.category || '',
+            'Подкатегория': item.subcategory || '',
+            'Наименование': item.name || '',
+            'Ед. изм.': item.unit || '',
+            'Остаток': Number(item.qty || 0),
+            'Мин. остаток': Number(item.minQty || 0),
+            'Статус': s.text,
+            'Где лежит': item.location || '',
+            'Примечание': item.note || ''
+          };
+        });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Склад');
+      XLSX.writeFileXLSX(wb, 'sklad_export.xlsx', { compression: true });
+    }
+
+    function exportShoppingExcel() {
+      if (!window.XLSX) return alert('Модуль XLSX не загрузился. Проверь интернет и попробуй ещё раз.');
+      if (!app.state.shopping.length) return alert('Список закупки пуст.');
+
+      const rows = [...app.state.shopping]
+        .sort((a,b) => {
+          const cat = String(a.category || '').localeCompare(String(b.category || ''), 'ru');
+          if (cat !== 0) return cat;
+          const sub = String(a.subcategory || '').localeCompare(String(b.subcategory || ''), 'ru');
+          if (sub !== 0) return sub;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+        })
+        .map(row => ({
+          'Категория': row.category || '',
+          'Подкатегория': row.subcategory || '',
+          'Наименование': row.name || '',
+          'Кол-во к покупке': row.buyQty === '' ? '' : Number(row.buyQty || 0),
+          'Ед. изм.': row.unit || 'шт',
+          'Примечание': row.note || ''
+        }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Закупка');
+      XLSX.writeFileXLSX(wb, 'shopping_list_export.xlsx', { compression: true });
     }
 
     function render() {
@@ -1246,17 +1131,26 @@
     }
 
     els.category.addEventListener('input', refreshSubcategorySuggestions);
+    els.editCategory.addEventListener('input', refreshEditSubcategorySuggestions);
     els.addBtn.addEventListener('click', addItem);
     els.addDemoBtn.addEventListener('click', addDemo);
-    els.exportBtn.addEventListener('click', exportData);
-    els.importFile.addEventListener('change', importData);
+    els.exportJsonBtn.addEventListener('click', exportJson);
+    els.importFile.addEventListener('change', importJson);
     els.search.addEventListener('input', renderItems);
     els.exportStockExcelBtn.addEventListener('click', exportStockExcel);
+    els.deleteCategoryBtn.addEventListener('click', deleteCurrentCategory);
+    els.manageSubcategoryBtn.addEventListener('click', openSubcategoryModal);
+
     els.fillShoppingBtn.addEventListener('click', addProblemToShopping);
     els.clearShoppingBtn.addEventListener('click', clearShopping);
     els.pdfShoppingBtn.addEventListener('click', exportShoppingPdf);
     els.exportShoppingExcelBtn.addEventListener('click', exportShoppingExcel);
-    els.deleteCategoryBtn.addEventListener('click', deleteCurrentCategory);
+
+    els.closeSubcategoryBtn.addEventListener('click', closeSubcategoryModal);
+    els.saveSubcategoryBtn.addEventListener('click', renameCurrentSubcategory);
+    els.deleteSubcategoryBtn.addEventListener('click', deleteCurrentSubcategory);
+    els.subcategoryModal.addEventListener('click', e => { if (e.target === els.subcategoryModal) closeSubcategoryModal(); });
+
     els.closeEditBtn.addEventListener('click', closeEditModal);
     els.saveEditBtn.addEventListener('click', saveEditedItem);
     els.deleteFromEditBtn.addEventListener('click', () => {
@@ -1265,16 +1159,19 @@
       closeEditModal();
       removeItem(id);
     });
-    els.editCategory.addEventListener('input', () => {
-      els.editSubcategoryList.innerHTML = getSubcategories(normalize(els.editCategory.value)).map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
-    });
-    els.editModal.addEventListener('click', (e) => {
-      if (e.target === els.editModal) closeEditModal();
-    });
+    els.editModal.addEventListener('click', e => { if (e.target === els.editModal) closeEditModal(); });
+
     els.closePrintBtn.addEventListener('click', closePrintOverlay);
     els.confirmPrintBtn.addEventListener('click', () => window.print());
+
     els.name.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
     els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+    setTimeout(checkVersionJsonAndRefresh, 1200);
+    window.addEventListener('focus', checkVersionJsonAndRefresh);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkVersionJsonAndRefresh();
+    });
 
     render();
   </script>
