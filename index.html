@@ -61,6 +61,11 @@
     }
     .tab.active,.subtab.active{background:var(--accent); border-color:var(--accent);}
 
+    
+    .tab[draggable="true"]{cursor:grab;}
+    .tab.dragging{opacity:.45;}
+    .tab.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
+
     .subtab[draggable="true"]{cursor:grab;}
     .subtab.dragging{opacity:.45;}
     .subtab.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
@@ -640,10 +645,21 @@
     }
 
     function getCategories() {
-      return [...new Set(
-        app.state.taxonomy.map(x => normalize(x.name)).filter(Boolean)
-          .concat(app.state.items.map(x => normalize(x.category)).filter(Boolean))
-      )].sort((a,b) => smartCompare(a, b));
+      const fromTaxonomy = app.state.taxonomy.map(x => normalize(x.name)).filter(Boolean);
+      const fromItems = app.state.items.map(x => normalize(x.category)).filter(Boolean);
+
+      const ordered = [];
+      const seen = new Set();
+
+      fromTaxonomy.forEach(cat => {
+        if (!seen.has(cat)) {
+          seen.add(cat);
+          ordered.push(cat);
+        }
+      });
+
+      const missing = [...new Set(fromItems.filter(cat => !seen.has(cat)))].sort((a,b) => smartCompare(a, b));
+      return ordered.concat(missing);
     }
 
     function getSubcategories(category) {
@@ -668,6 +684,67 @@
       return ordered.concat(missing);
     }
 
+
+
+    let dragCategoryName = null;
+
+    function moveCategoryBefore(dragCategory, targetCategory) {
+      if (!dragCategory || !targetCategory || dragCategory === targetCategory) return;
+
+      const categories = getCategories();
+      const from = categories.findIndex(x => normalize(x) === normalize(dragCategory));
+      const to = categories.findIndex(x => normalize(x) === normalize(targetCategory));
+      if (from === -1 || to === -1) return;
+
+      const reordered = [...categories];
+      const moved = reordered.splice(from, 1)[0];
+      const adjustedTo = from < to ? to - 1 : to;
+      reordered.splice(adjustedTo, 0, moved);
+
+      const entryMap = new Map(app.state.taxonomy.map(entry => [normalize(entry.name), entry]));
+      app.state.taxonomy = reordered.map(name => {
+        const existing = entryMap.get(normalize(name));
+        return existing || { name, subcategories: [] };
+      });
+
+      saveState();
+      render();
+    }
+
+    function enableCategoryDragAndDrop() {
+      els.tabs.querySelectorAll('.tab[data-cat]').forEach(btn => {
+        if (btn.dataset.cat === 'all') return;
+
+        btn.setAttribute('draggable', 'true');
+
+        btn.addEventListener('dragstart', () => {
+          dragCategoryName = btn.dataset.cat;
+          btn.classList.add('dragging');
+        });
+
+        btn.addEventListener('dragend', () => {
+          btn.classList.remove('dragging');
+          els.tabs.querySelectorAll('.tab.drag-over').forEach(x => x.classList.remove('drag-over'));
+          dragCategoryName = null;
+        });
+
+        btn.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (!dragCategoryName || dragCategoryName === btn.dataset.cat) return;
+          btn.classList.add('drag-over');
+        });
+
+        btn.addEventListener('dragleave', () => {
+          btn.classList.remove('drag-over');
+        });
+
+        btn.addEventListener('drop', (e) => {
+          e.preventDefault();
+          btn.classList.remove('drag-over');
+          moveCategoryBefore(dragCategoryName, btn.dataset.cat);
+        });
+      });
+    }
 
     let dragSubcategoryName = null;
 
@@ -1270,6 +1347,8 @@
           render();
         });
       });
+
+      enableCategoryDragAndDrop();
 
       const subs = getSubcategories(app.activeCategory);
       if (!subs.length || app.activeCategory === 'all') {
