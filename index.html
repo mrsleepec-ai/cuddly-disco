@@ -605,7 +605,30 @@
     });
     setTimeout(checkForAppUpdate, 1500);
 
-    render();
+    
+    const LOCAL_APP_VERSION = "20260331110612";
+
+    async function checkVersion() {
+      try {
+        const res = await fetch("version.json?nocache=" + Date.now(), { cache: "no-store" });
+        const data = await res.json();
+
+        if (data.version && data.version != LOCAL_APP_VERSION) {
+          console.log("New version detected");
+          window.location.reload(true);
+        }
+      } catch(e) {
+        console.log("version check skipped");
+      }
+    }
+
+    setTimeout(checkVersion, 1500);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") checkVersion();
+    });
+
+render();
+ enableDrag();
     }
 
     function addDemo() {
@@ -618,6 +641,7 @@
       demo.reverse().forEach(item => app.state.items.unshift({ id: uid(), ...item }));
       saveState();
       render();
+ enableDrag();
     }
 
     function exportData() {
@@ -652,6 +676,7 @@
           };
           saveState();
           render();
+ enableDrag();
           alert('Импортировано.');
         } catch (e) {
           alert('Файл битый или не подходит.');
@@ -668,6 +693,7 @@
       item.qty = Math.max(0, Number(item.qty || 0) + delta);
       saveState();
       render();
+ enableDrag();
     }
 
     function setQty(id, value) {
@@ -677,6 +703,7 @@
       item.qty = Number.isFinite(num) ? Math.max(0, num) : 0;
       saveState();
       render();
+ enableDrag();
     }
 
     function removeItem(id) {
@@ -685,6 +712,7 @@
       app.state.shopping = app.state.shopping.filter(x => x.itemId !== id);
       saveState();
       render();
+ enableDrag();
     }
 
     function filteredItems() {
@@ -720,6 +748,7 @@
 
       saveState();
       render();
+ enableDrag();
     }
 
     function updateShoppingItem(id, patch) {
@@ -734,6 +763,7 @@
       app.state.shopping = [];
       saveState();
       render();
+ enableDrag();
     }
 
     function openEditModal(id) {
@@ -792,6 +822,7 @@
       saveState();
       closeEditModal();
       render();
+ enableDrag();
     }
 
     function moveEditedItem(direction) {
@@ -806,6 +837,7 @@
       app.state.items.splice(newIndex, 0, item);
       saveState();
       render();
+ enableDrag();
       openEditModal(item.id);
     }
 
@@ -822,6 +854,7 @@
         app.activeCategory = 'all';
         saveState();
         render();
+ enableDrag();
         return;
       }
 
@@ -834,6 +867,7 @@
       app.activeCategory = 'all';
       saveState();
       render();
+ enableDrag();
     }
 
     function renderTabs() {
@@ -879,7 +913,43 @@
       els.statZero.textContent = zero;
     }
 
-    function renderItems() {
+    
+    let dragId = null;
+
+    function enableDrag() {
+      els.items.querySelectorAll('.card').forEach(card => {
+
+        card.addEventListener('dragstart', e => {
+          dragId = card.dataset.id;
+          card.style.opacity = '0.5';
+        });
+
+        card.addEventListener('dragend', e => {
+          card.style.opacity = '1';
+          dragId = null;
+          saveState();
+        });
+
+        card.addEventListener('dragover', e => e.preventDefault());
+
+        card.addEventListener('drop', e => {
+          e.preventDefault();
+          const targetId = card.dataset.id;
+          if (!dragId || dragId === targetId) return;
+
+          const from = app.state.items.findIndex(x => x.id === dragId);
+          const to = app.state.items.findIndex(x => x.id === targetId);
+
+          const moved = app.state.items.splice(from,1)[0];
+          app.state.items.splice(to,0,moved);
+
+          render();
+        });
+
+      });
+    }
+
+function renderItems() {
       const list = filteredItems();
       if (!list.length) {
         els.items.innerHTML = '<div class="empty">Пока пусто.</div>';
@@ -908,6 +978,8 @@
               <input class="qty qty-input" type="number" min="0" step="1" value="${Number(item.qty || 0)}" data-qty-input="${item.id}" />
               <button data-inc="${item.id}">+</button>
               <button class="secondary" data-edit="${item.id}">Ред.</button>
+            </div>
+          </div>
             </div>
           </div>
         `;
@@ -1145,6 +1217,7 @@
     els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 
     render();
+ enableDrag();
   </script>
 </body>
 </html>
