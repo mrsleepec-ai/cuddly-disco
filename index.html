@@ -210,6 +210,19 @@
       margin-bottom:12px;
     }
 
+    
+    .item[draggable="true"]{
+      cursor:grab;
+    }
+    .item.dragging{
+      opacity:.45;
+      transform:scale(.995);
+    }
+    .item.drag-over{
+      outline:2px dashed #60a5fa;
+      outline-offset:2px;
+    }
+
     @media (max-width:720px){
       .print-overlay{
         padding:0;
@@ -401,9 +414,7 @@
 
       <div class="row" style="margin-top:12px;">
         <button id="saveEditBtn">Сохранить</button>
-        <button class="secondary" id="moveUpBtn">Выше</button>
-        <button class="secondary" id="moveDownBtn">Ниже</button>
-        <button class="danger" id="deleteFromEditBtn">Удалить</button>
+                <button class="danger" id="deleteFromEditBtn">Удалить</button>
       </div>
     </div>
   </div>
@@ -466,8 +477,6 @@
       editModal: document.getElementById('editModal'),
       closeEditBtn: document.getElementById('closeEditBtn'),
       saveEditBtn: document.getElementById('saveEditBtn'),
-      moveUpBtn: document.getElementById('moveUpBtn'),
-      moveDownBtn: document.getElementById('moveDownBtn'),
       deleteFromEditBtn: document.getElementById('deleteFromEditBtn'),
       editCategory: document.getElementById('editCategory'),
       editCategoryList: document.getElementById('editCategoryList'),
@@ -485,41 +494,26 @@
       editingId: null,
     };
 
-    const APP_BUILD = '20260330161134';
-    let updateDismissedForBuild = '';
-
-    function buildCheckUrl() {
-      const url = new URL(window.location.href);
-      url.searchParams.set('__check', Date.now().toString());
-      return url.toString();
-    }
-
-    function showUpdateToast(nextBuild) {
-      if (updateDismissedForBuild === nextBuild) return;
-      els.updateToast.classList.add('show');
-      els.reloadAppBtn.onclick = () => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('v', nextBuild);
-        window.location.replace(url.toString());
-      };
-      els.dismissUpdateBtn.onclick = () => {
-        updateDismissedForBuild = nextBuild;
-        els.updateToast.classList.remove('show');
-      };
-    }
-
-    async function checkForAppUpdate() {
+    async function checkVersionJsonAndRefresh() {
       try {
-        const res = await fetch(buildCheckUrl(), {
-          cache: 'no-store',
-          headers: { 'cache-control': 'no-cache' }
-        });
-        const text = await res.text();
-        const match = text.match(/<meta\s+name=["']app-build["']\s+content=["']([^"']+)["']/i);
-        const remoteBuild = match ? match[1] : '';
-        if (remoteBuild && remoteBuild !== APP_BUILD) {
-          showUpdateToast(remoteBuild);
+        const res = await fetch(`version.json?ts=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const remoteVersion = String(data.version || '').trim();
+        if (!remoteVersion) return;
+
+        const url = new URL(window.location.href);
+        const currentV = url.searchParams.get('v') || '';
+
+        if (currentV !== remoteVersion) {
+          url.searchParams.set('v', remoteVersion);
+          window.location.replace(url.toString());
         }
+      } catch (e) {
+        // ignore version check errors
+      }
+    }
+
       } catch (e) {
         // ignore network/cache check failures
       }
@@ -598,37 +592,14 @@
       els.location.value = '';
       els.note.value = '';
       saveState();
-  
-    window.addEventListener('focus', checkForAppUpdate);
+
+    setTimeout(checkVersionJsonAndRefresh, 1200);
+    window.addEventListener('focus', checkVersionJsonAndRefresh);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') checkForAppUpdate();
-    });
-    setTimeout(checkForAppUpdate, 1500);
-
-    
-    const LOCAL_APP_VERSION = "20260331110612";
-
-    async function checkVersion() {
-      try {
-        const res = await fetch("version.json?nocache=" + Date.now(), { cache: "no-store" });
-        const data = await res.json();
-
-        if (data.version && data.version != LOCAL_APP_VERSION) {
-          console.log("New version detected");
-          window.location.reload(true);
-        }
-      } catch(e) {
-        console.log("version check skipped");
-      }
-    }
-
-    setTimeout(checkVersion, 1500);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") checkVersion();
+      if (document.visibilityState === 'visible') checkVersionJsonAndRefresh();
     });
 
-render();
- enableDrag();
+    render();
     }
 
     function addDemo() {
@@ -641,7 +612,6 @@ render();
       demo.reverse().forEach(item => app.state.items.unshift({ id: uid(), ...item }));
       saveState();
       render();
- enableDrag();
     }
 
     function exportData() {
@@ -676,7 +646,6 @@ render();
           };
           saveState();
           render();
- enableDrag();
           alert('Импортировано.');
         } catch (e) {
           alert('Файл битый или не подходит.');
@@ -693,7 +662,6 @@ render();
       item.qty = Math.max(0, Number(item.qty || 0) + delta);
       saveState();
       render();
- enableDrag();
     }
 
     function setQty(id, value) {
@@ -703,7 +671,6 @@ render();
       item.qty = Number.isFinite(num) ? Math.max(0, num) : 0;
       saveState();
       render();
- enableDrag();
     }
 
     function removeItem(id) {
@@ -712,7 +679,6 @@ render();
       app.state.shopping = app.state.shopping.filter(x => x.itemId !== id);
       saveState();
       render();
- enableDrag();
     }
 
     function filteredItems() {
@@ -748,7 +714,6 @@ render();
 
       saveState();
       render();
- enableDrag();
     }
 
     function updateShoppingItem(id, patch) {
@@ -763,7 +728,6 @@ render();
       app.state.shopping = [];
       saveState();
       render();
- enableDrag();
     }
 
     function openEditModal(id) {
@@ -822,23 +786,57 @@ render();
       saveState();
       closeEditModal();
       render();
- enableDrag();
     }
 
-    function moveEditedItem(direction) {
-      const index = app.state.items.findIndex(x => x.id === app.editingId);
-      if (index === -1) return;
 
-      const newIndex = index + direction;
-      if (newIndex < 0 || newIndex >= app.state.items.length) return;
 
-      const item = app.state.items[index];
-      app.state.items.splice(index, 1);
-      app.state.items.splice(newIndex, 0, item);
+    let dragItemId = null;
+
+    function moveItemBefore(dragId, targetId) {
+      if (!dragId || !targetId || dragId === targetId) return;
+
+      const from = app.state.items.findIndex(x => x.id === dragId);
+      const to = app.state.items.findIndex(x => x.id === targetId);
+      if (from === -1 || to === -1) return;
+
+      const moved = app.state.items.splice(from, 1)[0];
+      const adjustedTo = from < to ? to - 1 : to;
+      app.state.items.splice(adjustedTo, 0, moved);
+
       saveState();
       render();
- enableDrag();
-      openEditModal(item.id);
+    }
+
+    function enableDragAndDrop() {
+      els.items.querySelectorAll('.item[data-id]').forEach(card => {
+        card.addEventListener('dragstart', () => {
+          dragItemId = card.dataset.id;
+          card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          els.items.querySelectorAll('.item.drag-over').forEach(x => x.classList.remove('drag-over'));
+          dragItemId = null;
+        });
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (!dragItemId || dragItemId === card.dataset.id) return;
+          card.classList.add('drag-over');
+        });
+
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const targetId = card.dataset.id;
+          card.classList.remove('drag-over');
+          moveItemBefore(dragItemId, targetId);
+        });
+      });
     }
 
     function deleteCurrentCategory() {
@@ -854,7 +852,6 @@ render();
         app.activeCategory = 'all';
         saveState();
         render();
- enableDrag();
         return;
       }
 
@@ -867,7 +864,6 @@ render();
       app.activeCategory = 'all';
       saveState();
       render();
- enableDrag();
     }
 
     function renderTabs() {
@@ -913,43 +909,7 @@ render();
       els.statZero.textContent = zero;
     }
 
-    
-    let dragId = null;
-
-    function enableDrag() {
-      els.items.querySelectorAll('.card').forEach(card => {
-
-        card.addEventListener('dragstart', e => {
-          dragId = card.dataset.id;
-          card.style.opacity = '0.5';
-        });
-
-        card.addEventListener('dragend', e => {
-          card.style.opacity = '1';
-          dragId = null;
-          saveState();
-        });
-
-        card.addEventListener('dragover', e => e.preventDefault());
-
-        card.addEventListener('drop', e => {
-          e.preventDefault();
-          const targetId = card.dataset.id;
-          if (!dragId || dragId === targetId) return;
-
-          const from = app.state.items.findIndex(x => x.id === dragId);
-          const to = app.state.items.findIndex(x => x.id === targetId);
-
-          const moved = app.state.items.splice(from,1)[0];
-          app.state.items.splice(to,0,moved);
-
-          render();
-        });
-
-      });
-    }
-
-function renderItems() {
+    function renderItems() {
       const list = filteredItems();
       if (!list.length) {
         els.items.innerHTML = '<div class="empty">Пока пусто.</div>';
@@ -959,7 +919,7 @@ function renderItems() {
       els.items.innerHTML = list.map(item => {
         const s = statusFor(item);
         return `
-          <div class="item">
+          <div class="item" draggable="true" data-id="${item.id}">
             <div class="item-top">
               <div>
                 <div class="name">${escapeHtml(item.name)}</div>
@@ -980,8 +940,6 @@ function renderItems() {
               <button class="secondary" data-edit="${item.id}">Ред.</button>
             </div>
           </div>
-            </div>
-          </div>
         `;
       }).join('');
 
@@ -992,6 +950,8 @@ function renderItems() {
         input.addEventListener('change', () => setQty(input.dataset.qtyInput, input.value));
         input.addEventListener('blur', () => setQty(input.dataset.qtyInput, input.value));
       });
+
+      enableDragAndDrop();
     }
 
     function renderShopping() {
@@ -1200,8 +1160,6 @@ function renderItems() {
     els.deleteCategoryBtn.addEventListener('click', deleteCurrentCategory);
     els.closeEditBtn.addEventListener('click', closeEditModal);
     els.saveEditBtn.addEventListener('click', saveEditedItem);
-    els.moveUpBtn.addEventListener('click', () => moveEditedItem(-1));
-    els.moveDownBtn.addEventListener('click', () => moveEditedItem(1));
     els.deleteFromEditBtn.addEventListener('click', () => {
       if (!app.editingId) return;
       const id = app.editingId;
@@ -1217,7 +1175,6 @@ function renderItems() {
     els.category.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 
     render();
- enableDrag();
   </script>
 </body>
 </html>
