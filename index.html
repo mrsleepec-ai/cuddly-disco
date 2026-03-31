@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
-  <meta name="app-build" content="20260330161134" />
   <title>Склад</title>
   <style>
     :root{
@@ -211,17 +210,9 @@
     }
 
     
-    .item[draggable="true"]{
-      cursor:grab;
-    }
-    .item.dragging{
-      opacity:.45;
-      transform:scale(.995);
-    }
-    .item.drag-over{
-      outline:2px dashed #60a5fa;
-      outline-offset:2px;
-    }
+    .item[draggable="true"]{cursor:grab;}
+    .item.dragging{opacity:.45;}
+    .item.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
 
     @media (max-width:720px){
       .print-overlay{
@@ -414,7 +405,7 @@
 
       <div class="row" style="margin-top:12px;">
         <button id="saveEditBtn">Сохранить</button>
-                <button class="danger" id="deleteFromEditBtn">Удалить</button>
+        <button class="danger" id="deleteFromEditBtn">Удалить</button>
       </div>
     </div>
   </div>
@@ -503,9 +494,9 @@
         if (!remoteVersion) return;
 
         const url = new URL(window.location.href);
-        const currentV = url.searchParams.get('v') || '';
+        const currentVersion = url.searchParams.get('v') || '';
 
-        if (currentV !== remoteVersion) {
+        if (currentVersion !== remoteVersion) {
           url.searchParams.set('v', remoteVersion);
           window.location.replace(url.toString());
         }
@@ -514,6 +505,97 @@
       }
     }
 
+    let dragItemId = null;
+
+    function moveItemBefore(dragId, targetId) {
+      if (!dragId || !targetId || dragId === targetId) return;
+
+      const from = app.state.items.findIndex(x => x.id === dragId);
+      const to = app.state.items.findIndex(x => x.id === targetId);
+      if (from === -1 || to === -1) return;
+
+      const moved = app.state.items.splice(from, 1)[0];
+      const adjustedTo = from < to ? to - 1 : to;
+      app.state.items.splice(adjustedTo, 0, moved);
+
+      saveState();
+      setTimeout(checkVersionJsonAndRefresh, 1200);
+    window.addEventListener('focus', checkVersionJsonAndRefresh);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkVersionJsonAndRefresh();
+    });
+
+    render();
+    }
+
+    function enableDragAndDrop() {
+      els.items.querySelectorAll('.item[data-id]').forEach(card => {
+        card.addEventListener('dragstart', () => {
+          dragItemId = card.dataset.id;
+          card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          els.items.querySelectorAll('.item.drag-over').forEach(x => x.classList.remove('drag-over'));
+          dragItemId = null;
+        });
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (!dragItemId || dragItemId === card.dataset.id) return;
+          card.classList.add('drag-over');
+        });
+
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const targetId = card.dataset.id;
+          card.classList.remove('drag-over');
+          moveItemBefore(dragItemId, targetId);
+        });
+      });
+    }
+
+
+    const APP_BUILD = '20260330161134';
+    let updateDismissedForBuild = '';
+
+    function buildCheckUrl() {
+      const url = new URL(window.location.href);
+      url.searchParams.set('__check', Date.now().toString());
+      return url.toString();
+    }
+
+    function showUpdateToast(nextBuild) {
+      if (updateDismissedForBuild === nextBuild) return;
+      els.updateToast.classList.add('show');
+      els.reloadAppBtn.onclick = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('v', nextBuild);
+        window.location.replace(url.toString());
+      };
+      els.dismissUpdateBtn.onclick = () => {
+        updateDismissedForBuild = nextBuild;
+        els.updateToast.classList.remove('show');
+      };
+    }
+
+    async function checkForAppUpdate() {
+      try {
+        const res = await fetch(buildCheckUrl(), {
+          cache: 'no-store',
+          headers: { 'cache-control': 'no-cache' }
+        });
+        const text = await res.text();
+        const match = text.match(/<meta\s+name=["']app-build["']\s+content=["']([^"']+)["']/i);
+        const remoteBuild = match ? match[1] : '';
+        if (remoteBuild && remoteBuild !== APP_BUILD) {
+          showUpdateToast(remoteBuild);
+        }
       } catch (e) {
         // ignore network/cache check failures
       }
@@ -592,12 +674,12 @@
       els.location.value = '';
       els.note.value = '';
       saveState();
-
-    setTimeout(checkVersionJsonAndRefresh, 1200);
-    window.addEventListener('focus', checkVersionJsonAndRefresh);
+  
+    window.addEventListener('focus', checkForAppUpdate);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') checkVersionJsonAndRefresh();
+      if (document.visibilityState === 'visible') checkForAppUpdate();
     });
+    setTimeout(checkForAppUpdate, 1500);
 
     render();
     }
@@ -788,56 +870,6 @@
       render();
     }
 
-
-
-    let dragItemId = null;
-
-    function moveItemBefore(dragId, targetId) {
-      if (!dragId || !targetId || dragId === targetId) return;
-
-      const from = app.state.items.findIndex(x => x.id === dragId);
-      const to = app.state.items.findIndex(x => x.id === targetId);
-      if (from === -1 || to === -1) return;
-
-      const moved = app.state.items.splice(from, 1)[0];
-      const adjustedTo = from < to ? to - 1 : to;
-      app.state.items.splice(adjustedTo, 0, moved);
-
-      saveState();
-      render();
-    }
-
-    function enableDragAndDrop() {
-      els.items.querySelectorAll('.item[data-id]').forEach(card => {
-        card.addEventListener('dragstart', () => {
-          dragItemId = card.dataset.id;
-          card.classList.add('dragging');
-        });
-
-        card.addEventListener('dragend', () => {
-          card.classList.remove('dragging');
-          els.items.querySelectorAll('.item.drag-over').forEach(x => x.classList.remove('drag-over'));
-          dragItemId = null;
-        });
-
-        card.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          if (!dragItemId || dragItemId === card.dataset.id) return;
-          card.classList.add('drag-over');
-        });
-
-        card.addEventListener('dragleave', () => {
-          card.classList.remove('drag-over');
-        });
-
-        card.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const targetId = card.dataset.id;
-          card.classList.remove('drag-over');
-          moveItemBefore(dragItemId, targetId);
-        });
-      });
-    }
 
     function deleteCurrentCategory() {
       if (!app.activeCategory || app.activeCategory === 'all') {
