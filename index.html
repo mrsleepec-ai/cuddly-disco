@@ -214,6 +214,16 @@
     .item.dragging{opacity:.45;}
     .item.drag-over{outline:2px dashed #60a5fa; outline-offset:2px;}
 
+    
+    .subtabs{
+      display:flex; gap:8px; overflow:auto; padding-bottom:2px; margin-top:10px;
+    }
+    .subtab{
+      white-space:nowrap; background:#0f172a; border:1px solid #475569;
+      color:var(--text); border-radius:12px; padding:10px 12px; font-size:14px; font-weight:700;
+    }
+    .subtab.active{background:var(--accent); border-color:var(--accent);}
+
     @media (max-width:720px){
       .print-overlay{
         padding:0;
@@ -290,6 +300,11 @@
           <input id="name" placeholder="Например: 4x1.5" />
         </div>
         <div>
+          <label for="subcategory">Подкатегория</label>
+          <input id="subcategory" list="subcategoryList" placeholder="Например: 0.75 кв / 1 кв / PG" />
+          <datalist id="subcategoryList"></datalist>
+        </div>
+        <div>
           <label for="unit">Ед. изм.</label>
           <select id="unit">
             <option value="шт">шт</option>
@@ -338,6 +353,7 @@
     <section class="panel">
       <h2>Склад</h2>
       <div class="tabs-wrap"><div class="tabs" id="tabs"></div><button class="danger delete-cat-btn" id="deleteCategoryBtn">Удалить категорию</button></div>
+      <div class="subtabs" id="subtabs"></div>
       <div class="row" style="margin:12px 0;">
         <input id="search" placeholder="Поиск по названию / месту / примечанию" />
         <button class="ghost" id="exportStockExcelBtn">Экспорт склада в XLSX</button>
@@ -375,6 +391,11 @@
         <div>
           <label for="editName">Наименование</label>
           <input id="editName" placeholder="Наименование" />
+        </div>
+        <div>
+          <label for="editSubcategory">Подкатегория</label>
+          <input id="editSubcategory" list="editSubcategoryList" placeholder="Подкатегория" />
+          <datalist id="editSubcategoryList"></datalist>
         </div>
         <div>
           <label for="editUnit">Ед. изм.</label>
@@ -435,6 +456,8 @@
       category: document.getElementById('category'),
       categoryList: document.getElementById('categoryList'),
       name: document.getElementById('name'),
+      subcategory: document.getElementById('subcategory'),
+      subcategoryList: document.getElementById('subcategoryList'),
       unit: document.getElementById('unit'),
       qty: document.getElementById('qty'),
       minQty: document.getElementById('minQty'),
@@ -449,6 +472,7 @@
       statNeedBuy: document.getElementById('statNeedBuy'),
       statZero: document.getElementById('statZero'),
       tabs: document.getElementById('tabs'),
+      subtabs: document.getElementById('subtabs'),
       deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
       search: document.getElementById('search'),
       exportStockExcelBtn: document.getElementById('exportStockExcelBtn'),
@@ -472,6 +496,8 @@
       editCategory: document.getElementById('editCategory'),
       editCategoryList: document.getElementById('editCategoryList'),
       editName: document.getElementById('editName'),
+      editSubcategory: document.getElementById('editSubcategory'),
+      editSubcategoryList: document.getElementById('editSubcategoryList'),
       editUnit: document.getElementById('editUnit'),
       editQty: document.getElementById('editQty'),
       editMinQty: document.getElementById('editMinQty'),
@@ -481,6 +507,7 @@
 
     const app = {
       activeCategory: 'all',
+      activeSubcategory: 'all',
       state: loadState(),
       editingId: null,
     };
@@ -624,7 +651,10 @@
         if (!raw) return { items: [], shopping: [] };
         const parsed = JSON.parse(raw);
         return {
-          items: Array.isArray(parsed.items) ? parsed.items : [],
+          items: Array.isArray(parsed.items) ? parsed.items.map(item => ({
+            ...item,
+            subcategory: item.subcategory || ''
+          })) : [],
           shopping: Array.isArray(parsed.shopping) ? parsed.shopping : [],
         };
       } catch (e) {
@@ -634,6 +664,23 @@
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(app.state));
+    }
+
+
+    function getSubcategories(category) {
+      if (!category || category === 'all') return [];
+      return [...new Set(
+        app.state.items
+          .filter(x => x.category === category)
+          .map(x => normalize(x.subcategory))
+          .filter(Boolean)
+      )].sort((a,b) => a.localeCompare(b, 'ru'));
+    }
+
+    function refreshSubcategorySuggestions() {
+      const category = normalize(els.category.value);
+      const list = category ? getSubcategories(category) : [];
+      els.subcategoryList.innerHTML = list.map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
     }
 
     function getCategories() {
@@ -653,12 +700,14 @@
     function addItem() {
       const category = normalize(els.category.value);
       const name = normalize(els.name.value);
+      const subcategory = normalize(els.subcategory.value);
       if (!category) return alert('Впиши категорию.');
       if (!name) return alert('Впиши название позиции.');
 
       app.state.items.unshift({
         id: uid(),
         category,
+        subcategory,
         name,
         unit: els.unit.value,
         qty: Number(els.qty.value || 0),
@@ -668,30 +717,13 @@
       });
 
       app.activeCategory = category;
+      app.activeSubcategory = subcategory || 'all';
       els.name.value = '';
+      els.subcategory.value = '';
       els.qty.value = '';
       els.minQty.value = '';
       els.location.value = '';
       els.note.value = '';
-      saveState();
-  
-    window.addEventListener('focus', checkForAppUpdate);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') checkForAppUpdate();
-    });
-    setTimeout(checkForAppUpdate, 1500);
-
-    render();
-    }
-
-    function addDemo() {
-      const demo = [
-        { category:'Кабеля', name:'0.75x3', unit:'м', qty:42, minQty:15, location:'Полка 1', note:'' },
-        { category:'Кабеля', name:'4x1.5', unit:'м', qty:7, minQty:15, location:'Полка 1', note:'чёрный' },
-        { category:'Клеммы', name:'синие 2.5', unit:'шт', qty:0, minQty:20, location:'Ящик 4', note:'' },
-        { category:'НШВ', name:'2.5', unit:'шт', qty:50, minQty:25, location:'Ящик 5', note:'' },
-      ];
-      demo.reverse().forEach(item => app.state.items.unshift({ id: uid(), ...item }));
       saveState();
       render();
     }
@@ -720,6 +752,7 @@
               id: x.id || uid(),
               itemId: x.itemId || '',
               category: x.category || '',
+              subcategory: x.subcategory || '',
               name: x.name || x.text || '',
               unit: x.unit || 'шт',
               buyQty: x.buyQty ?? '',
@@ -767,9 +800,10 @@
       const q = normalize(els.search.value).toLowerCase();
       return app.state.items.filter(item => {
         const inCategory = app.activeCategory === 'all' ? true : item.category === app.activeCategory;
-        const hay = [item.name, item.category, item.location, item.note].join(' ').toLowerCase();
+        const inSubcategory = app.activeSubcategory === 'all' ? true : normalize(item.subcategory) === app.activeSubcategory;
+        const hay = [item.name, item.category, item.subcategory, item.location, item.note].join(' ').toLowerCase();
         const inSearch = !q || hay.includes(q);
-        return inCategory && inSearch;
+        return inCategory && inSubcategory && inSearch;
       });
     }
 
@@ -786,6 +820,7 @@
             id: uid(),
             itemId: item.id,
             category: item.category,
+            subcategory: item.subcategory || '',
             name: item.name,
             unit: item.unit || 'шт',
             buyQty: deficit > 0 ? deficit : '',
@@ -821,6 +856,8 @@
       els.editCategoryList.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
       els.editCategory.value = item.category || '';
       els.editName.value = item.name || '';
+      els.editSubcategoryList.innerHTML = getSubcategories(item.category || '').map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+      els.editSubcategory.value = item.subcategory || '';
       els.editUnit.value = item.unit || 'шт';
       els.editQty.value = Number(item.qty || 0);
       els.editMinQty.value = Number(item.minQty || 0);
@@ -840,6 +877,7 @@
 
       const category = normalize(els.editCategory.value);
       const name = normalize(els.editName.value);
+      const subcategory = normalize(els.editSubcategory.value);
       if (!category) return alert('Впиши категорию.');
       if (!name) return alert('Впиши название позиции.');
 
@@ -847,6 +885,7 @@
 
       item.category = category;
       item.name = name;
+      item.subcategory = subcategory;
       item.unit = els.editUnit.value;
       item.qty = Math.max(0, Number(els.editQty.value || 0));
       item.minQty = Math.max(0, Number(els.editMinQty.value || 0));
@@ -882,6 +921,7 @@
 
       if (!itemsInCategory.length) {
         app.activeCategory = 'all';
+      app.activeSubcategory = 'all';
         saveState();
         render();
         return;
@@ -905,6 +945,7 @@
 
       if (!categories.length) {
         els.tabs.innerHTML = '<div class="empty">Категории появятся после добавления первой позиции.</div>';
+        els.subtabs.innerHTML = '';
         els.deleteCategoryBtn.style.display = 'none';
         return;
       }
@@ -914,6 +955,7 @@
       }
 
       els.deleteCategoryBtn.style.display = app.activeCategory !== 'all' ? 'inline-flex' : 'none';
+      if (app.activeCategory === 'all') app.activeSubcategory = 'all';
 
       const buttons = [
         `<button class="tab ${app.activeCategory === 'all' ? 'active' : ''}" data-cat="all">Все</button>`,
@@ -924,10 +966,32 @@
       els.tabs.querySelectorAll('[data-cat]').forEach(btn => {
         btn.addEventListener('click', () => {
           app.activeCategory = btn.dataset.cat;
+          app.activeSubcategory = 'all';
           renderItems();
           renderTabs();
         });
       });
+
+      const subcategories = getSubcategories(app.activeCategory);
+      if (app.activeCategory === 'all' || !subcategories.length) {
+        els.subtabs.innerHTML = '';
+      } else {
+        if (app.activeSubcategory !== 'all' && !subcategories.includes(app.activeSubcategory)) {
+          app.activeSubcategory = 'all';
+        }
+        const subButtons = [
+          `<button class="subtab ${app.activeSubcategory === 'all' ? 'active' : ''}" data-subcat="all">Все</button>`,
+          ...subcategories.map(s => `<button class="subtab ${app.activeSubcategory === s ? 'active' : ''}" data-subcat="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
+        ];
+        els.subtabs.innerHTML = subButtons.join('');
+        els.subtabs.querySelectorAll('[data-subcat]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            app.activeSubcategory = btn.dataset.subcat;
+            renderItems();
+            renderTabs();
+          });
+        });
+      }
     }
 
     function renderStats() {
@@ -955,7 +1019,7 @@
             <div class="item-top">
               <div>
                 <div class="name">${escapeHtml(item.name)}</div>
-                <div class="cat">${escapeHtml(item.category)}</div>
+                <div class="cat">${escapeHtml(item.category)}${item.subcategory ? " • " + escapeHtml(item.subcategory) : ""}</div>
               </div>
               <div class="badge ${s.key}">${s.text}</div>
             </div>
@@ -1005,7 +1069,7 @@
           ${rows.map(row => `
             <div class="shopping-item">
               <div>
-                <div class="shop-name">${escapeHtml(row.name || '—')}</div>
+                <div class="shop-name">${escapeHtml(row.name || '—')}</div>${row.subcategory ? `<div class="shopping-meta">Подкатегория: ${escapeHtml(row.subcategory)}</div>` : ""}
                 <div class="shopping-meta">Примечание: ${escapeHtml(row.note || '—')}</div>
               </div>
               <div class="shop-field">
@@ -1061,6 +1125,7 @@
           const s = statusFor(item);
           return {
             'Категория': item.category || '',
+            'Подкатегория': item.subcategory || '',
             'Наименование': item.name || '',
             'Ед. изм.': item.unit || '',
             'Остаток': Number(item.qty || 0),
@@ -1101,6 +1166,7 @@
         })
         .map(row => ({
           'Категория': row.category || '',
+          'Подкатегория': row.subcategory || '',
           'Наименование': row.name || '',
           'Кол-во к покупке': row.buyQty === '' ? '' : Number(row.buyQty || 0),
           'Ед. изм.': row.unit || 'шт',
@@ -1129,7 +1195,7 @@
             <table class="print-table">
               <thead>
                 <tr>
-                  <th>Наименование</th>
+                  <th>Подкатегория / Наименование</th>
                   <th style="width:90px;">Кол-во</th>
                   <th style="width:80px;">Ед.</th>
                   <th>Примечание</th>
@@ -1138,7 +1204,7 @@
               <tbody>
                 ${rows.map(row => `
                   <tr>
-                    <td>${escapeHtml(row.name || '—')}</td>
+                    <td>${row.subcategory ? `<div>${escapeHtml(row.subcategory)}</div>` : ''}<div>${escapeHtml(row.name || '—')}</div></td>
                     <td>${row.buyQty === '' ? '—' : escapeHtml(String(row.buyQty))}</td>
                     <td>${escapeHtml(row.unit || 'шт')}</td>
                     <td>${escapeHtml(row.note || '—')}</td>
@@ -1179,6 +1245,7 @@
       renderShopping();
     }
 
+    els.category.addEventListener('input', refreshSubcategorySuggestions);
     els.addBtn.addEventListener('click', addItem);
     els.addDemoBtn.addEventListener('click', addDemo);
     els.exportBtn.addEventListener('click', exportData);
@@ -1197,6 +1264,9 @@
       const id = app.editingId;
       closeEditModal();
       removeItem(id);
+    });
+    els.editCategory.addEventListener('input', () => {
+      els.editSubcategoryList.innerHTML = getSubcategories(normalize(els.editCategory.value)).map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
     });
     els.editModal.addEventListener('click', (e) => {
       if (e.target === els.editModal) closeEditModal();
