@@ -137,6 +137,22 @@
     }
     .print-table{width:100%; border-collapse:collapse; font-size:12px;}
     .print-table th,.print-table td{text-align:left; border:1px solid #cbd5e1; padding:8px; color:#111827;}
+    
+    .tree-list{display:grid; gap:10px;}
+    .tree-category{
+      border:1px solid var(--line); border-radius:14px; background:#0f172a; padding:12px;
+    }
+    .tree-head{
+      display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;
+    }
+    .tree-name{font-weight:800; font-size:16px;}
+    .tree-subs{display:grid; gap:8px; margin-top:8px;}
+    .tree-sub{
+      display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 12px;
+      border:1px solid #475569; border-radius:12px; background:#111827; flex-wrap:wrap;
+    }
+    .tree-empty{color:var(--muted); font-size:13px;}
+
     @media (max-width:720px){
       .grid,.stats,.shopping-item{grid-template-columns:1fr;}
       .actions{grid-template-columns:50px 1fr 50px 84px;}
@@ -232,6 +248,7 @@
       <h2>Склад</h2>
       <div class="tabs-wrap">
         <div class="tabs" id="tabs"></div>
+        <button class="secondary" id="openStructureBtn">Структура</button>
         <button class="danger" id="deleteCategoryBtn" style="display:none;">Удалить категорию</button>
       </div>
       <div class="subtabs-wrap">
@@ -255,6 +272,42 @@
       </div>
       <div id="shopping"></div>
     </section>
+  </div>
+
+
+  <div class="modal" id="structureModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 style="margin:0;font-size:18px;">Управление структурой склада</h2>
+        <button class="secondary" id="closeStructureBtn">Закрыть</button>
+      </div>
+
+      <div class="grid" style="margin-bottom:12px;">
+        <div>
+          <label for="managerCategoryInput">Новая категория</label>
+          <input id="managerCategoryInput" placeholder="Например: Кабеля" />
+        </div>
+        <div class="row" style="align-items:end;">
+          <button id="managerAddCategoryBtn">Добавить категорию</button>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-bottom:12px;">
+        <div>
+          <label for="managerParentCategory">Категория для подкатегории</label>
+          <select id="managerParentCategory"></select>
+        </div>
+        <div>
+          <label for="managerSubcategoryInput">Новая подкатегория</label>
+          <input id="managerSubcategoryInput" placeholder="Например: 0.75 кв" />
+        </div>
+        <div class="full row">
+          <button id="managerAddSubcategoryBtn">Добавить подкатегорию</button>
+        </div>
+      </div>
+
+      <div class="tree-list" id="structureTree"></div>
+    </div>
   </div>
 
   <div class="modal" id="subcategoryModal">
@@ -342,7 +395,7 @@
 
   <script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
-    const STORAGE_KEY = 'warehouse-rebuilt-v2';
+    const STORAGE_KEY = 'warehouse-rebuilt-v3';
 
     const els = {
       category: document.getElementById('category'),
@@ -367,6 +420,7 @@
       statZero: document.getElementById('statZero'),
       tabs: document.getElementById('tabs'),
       subtabs: document.getElementById('subtabs'),
+      openStructureBtn: document.getElementById('openStructureBtn'),
       deleteCategoryBtn: document.getElementById('deleteCategoryBtn'),
       manageSubcategoryBtn: document.getElementById('manageSubcategoryBtn'),
       search: document.getElementById('search'),
@@ -377,6 +431,14 @@
       clearShoppingBtn: document.getElementById('clearShoppingBtn'),
       pdfShoppingBtn: document.getElementById('pdfShoppingBtn'),
       exportShoppingExcelBtn: document.getElementById('exportShoppingExcelBtn'),
+      structureModal: document.getElementById('structureModal'),
+      closeStructureBtn: document.getElementById('closeStructureBtn'),
+      managerCategoryInput: document.getElementById('managerCategoryInput'),
+      managerAddCategoryBtn: document.getElementById('managerAddCategoryBtn'),
+      managerParentCategory: document.getElementById('managerParentCategory'),
+      managerSubcategoryInput: document.getElementById('managerSubcategoryInput'),
+      managerAddSubcategoryBtn: document.getElementById('managerAddSubcategoryBtn'),
+      structureTree: document.getElementById('structureTree'),
       subcategoryModal: document.getElementById('subcategoryModal'),
       closeSubcategoryBtn: document.getElementById('closeSubcategoryBtn'),
       renameSubcategoryInput: document.getElementById('renameSubcategoryInput'),
@@ -586,6 +648,164 @@
       app.activeSubcategory = subcategory;
       saveState();
       render();
+    }
+
+
+    function openStructureModal() {
+      renderStructureManager();
+      els.structureModal.classList.add('show');
+    }
+
+    function closeStructureModal() {
+      els.structureModal.classList.remove('show');
+    }
+
+    function renderStructureManager() {
+      const categories = getCategories();
+      const options = categories.length
+        ? categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')
+        : '<option value="">Нет категорий</option>';
+      els.managerParentCategory.innerHTML = options;
+
+      if (!categories.length) {
+        els.structureTree.innerHTML = '<div class="empty">Пока нет категорий.</div>';
+        return;
+      }
+
+      els.structureTree.innerHTML = categories.map(category => {
+        const subs = getSubcategories(category);
+        return `
+          <div class="tree-category">
+            <div class="tree-head">
+              <div class="tree-name">${escapeHtml(category)}</div>
+              <div class="row">
+                <button class="secondary" data-rename-cat="${escapeHtml(category)}">Переименовать</button>
+                <button class="danger" data-delete-cat="${escapeHtml(category)}">Удалить</button>
+              </div>
+            </div>
+            <div class="tree-subs">
+              ${subs.length ? subs.map(sub => `
+                <div class="tree-sub">
+                  <div>${escapeHtml(sub)}</div>
+                  <div class="row">
+                    <button class="secondary" data-rename-sub="${escapeHtml(category)}||${escapeHtml(sub)}">Переименовать</button>
+                    <button class="danger" data-delete-sub="${escapeHtml(category)}||${escapeHtml(sub)}">Удалить</button>
+                  </div>
+                </div>
+              `).join('') : '<div class="tree-empty">Подкатегорий нет.</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      els.structureTree.querySelectorAll('[data-rename-cat]').forEach(btn => {
+        btn.addEventListener('click', () => renameCategoryPrompt(btn.dataset.renameCat));
+      });
+      els.structureTree.querySelectorAll('[data-delete-cat]').forEach(btn => {
+        btn.addEventListener('click', () => deleteCategoryByName(btn.dataset.deleteCat));
+      });
+      els.structureTree.querySelectorAll('[data-rename-sub]').forEach(btn => {
+        const [category, sub] = btn.dataset.renameSub.split('||');
+        btn.addEventListener('click', () => renameSubcategoryByName(category, sub));
+      });
+      els.structureTree.querySelectorAll('[data-delete-sub]').forEach(btn => {
+        const [category, sub] = btn.dataset.deleteSub.split('||');
+        btn.addEventListener('click', () => deleteSubcategoryByName(category, sub));
+      });
+    }
+
+    function renameCategoryPrompt(oldName) {
+      const next = prompt('Новое имя категории', oldName);
+      const newName = normalize(next);
+      if (!newName || newName === oldName) return;
+
+      ensureCategory(newName);
+
+      app.state.items.forEach(item => {
+        if (normalize(item.category) === normalize(oldName)) item.category = newName;
+      });
+      app.state.shopping.forEach(row => {
+        if (normalize(row.category) === normalize(oldName)) row.category = newName;
+      });
+
+      const oldEntry = findCategoryEntry(oldName);
+      const newEntry = findCategoryEntry(newName);
+      if (oldEntry && newEntry && normalize(oldName) !== normalize(newName)) {
+        oldEntry.subcategories.forEach(sub => ensureSubcategory(newName, sub));
+      }
+      removeCategoryTaxonomy(oldName);
+
+      if (app.activeCategory === oldName) app.activeCategory = newName;
+
+      saveState();
+      render();
+      renderStructureManager();
+    }
+
+    function deleteCategoryByName(category) {
+      const ok = confirm(`Удалить категорию "${category}" и всё внутри неё?`);
+      if (!ok) return;
+
+      const ids = new Set(app.state.items.filter(x => normalize(x.category) === normalize(category)).map(x => x.id));
+      app.state.items = app.state.items.filter(x => normalize(x.category) !== normalize(category));
+      app.state.shopping = app.state.shopping.filter(x => !(ids.has(x.itemId) || normalize(x.category) === normalize(category)));
+      removeCategoryTaxonomy(category);
+
+      if (app.activeCategory === category) {
+        app.activeCategory = 'all';
+        app.activeSubcategory = 'all';
+      }
+
+      saveState();
+      render();
+      renderStructureManager();
+    }
+
+    function renameSubcategoryByName(category, oldSub) {
+      const next = prompt('Новое имя подкатегории', oldSub);
+      const newSub = normalize(next);
+      if (!newSub || newSub === oldSub) return;
+
+      app.state.items.forEach(item => {
+        if (normalize(item.category) === normalize(category) && normalize(item.subcategory) === normalize(oldSub)) {
+          item.subcategory = newSub;
+        }
+      });
+      app.state.shopping.forEach(row => {
+        if (normalize(row.category) === normalize(category) && normalize(row.subcategory) === normalize(oldSub)) {
+          row.subcategory = newSub;
+        }
+      });
+
+      removeSubcategoryTaxonomy(category, oldSub);
+      ensureSubcategory(category, newSub);
+
+      if (app.activeCategory === category && app.activeSubcategory === oldSub) app.activeSubcategory = newSub;
+
+      saveState();
+      render();
+      renderStructureManager();
+    }
+
+    function deleteSubcategoryByName(category, subcategory) {
+      const ok = confirm(`Удалить подкатегорию "${subcategory}" и все позиции внутри неё?`);
+      if (!ok) return;
+
+      const ids = new Set(
+        app.state.items
+          .filter(item => normalize(item.category) === normalize(category) && normalize(item.subcategory) === normalize(subcategory))
+          .map(item => item.id)
+      );
+
+      app.state.items = app.state.items.filter(item => !(normalize(item.category) === normalize(category) && normalize(item.subcategory) === normalize(subcategory)));
+      app.state.shopping = app.state.shopping.filter(row => !(ids.has(row.itemId) || (normalize(row.category) === normalize(category) && normalize(row.subcategory) === normalize(subcategory))));
+      removeSubcategoryTaxonomy(category, subcategory);
+
+      if (app.activeCategory === category && app.activeSubcategory === subcategory) app.activeSubcategory = 'all';
+
+      saveState();
+      render();
+      renderStructureManager();
     }
 
     function addItem() {
@@ -1240,6 +1460,29 @@
 
     els.category.addEventListener('input', refreshSubcategorySuggestions);
     els.editCategory.addEventListener('input', refreshEditSubcategorySuggestions);
+    els.openStructureBtn.addEventListener('click', openStructureModal);
+    els.closeStructureBtn.addEventListener('click', closeStructureModal);
+    els.structureModal.addEventListener('click', e => { if (e.target === els.structureModal) closeStructureModal(); });
+    els.managerAddCategoryBtn.addEventListener('click', () => {
+      const category = normalize(els.managerCategoryInput.value);
+      if (!category) return alert('Впиши категорию.');
+      ensureCategory(category);
+      els.managerCategoryInput.value = '';
+      saveState();
+      render();
+      renderStructureManager();
+    });
+    els.managerAddSubcategoryBtn.addEventListener('click', () => {
+      const category = normalize(els.managerParentCategory.value);
+      const subcategory = normalize(els.managerSubcategoryInput.value);
+      if (!category) return alert('Выбери категорию.');
+      if (!subcategory) return alert('Впиши подкатегорию.');
+      ensureSubcategory(category, subcategory);
+      els.managerSubcategoryInput.value = '';
+      saveState();
+      render();
+      renderStructureManager();
+    });
     els.createCategoryBtn.addEventListener('click', createCategoryOnly);
     els.createSubcategoryBtn.addEventListener('click', createSubcategoryOnly);
     els.addBtn.addEventListener('click', addItem);
